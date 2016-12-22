@@ -2,7 +2,7 @@ package com.se.api.response;
 
 import java.util.List;
 
-import com.se.api.data.User;
+import com.se.api.data.UserData;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -11,5 +11,5 @@ import lombok.Setter;
 @Setter
 public class UserListResponse {
 	private int state;
-	private List<User> list;
+	private List<UserData> list;
 }

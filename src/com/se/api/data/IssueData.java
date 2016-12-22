@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class Issue {
+public class IssueData {
 	private String title;
 	private String description;
 	private String state;

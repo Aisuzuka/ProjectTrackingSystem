@@ -2,7 +2,7 @@ package com.se.api.response;
 
 import java.util.List;
 
-import com.se.api.data.Project;
+import com.se.api.data.ProjectData;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -11,5 +11,5 @@ import lombok.Setter;
 @Setter
 public class ProjectListResponse {
 	private int state;
-	private List<Project> list;
+	private List<ProjectData> list;
 }

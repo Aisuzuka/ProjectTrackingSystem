@@ -1,6 +1,6 @@
 package com.se.api.response;
 
-import com.se.api.data.User;
+import com.se.api.data.UserData;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -9,5 +9,5 @@ import lombok.Setter;
 @Setter
 public class UserItemResponse {
 	private int state;
-	private User user;
+	private UserData user;
 }

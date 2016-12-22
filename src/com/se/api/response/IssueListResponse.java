@@ -2,7 +2,7 @@ package com.se.api.response;
 
 import java.util.List;
 
-import com.se.api.data.Issue;
+import com.se.api.data.IssueData;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -11,5 +11,5 @@ import lombok.Setter;
 @Setter
 public class IssueListResponse {
 	private int state;
-	private List<Issue> list;
+	private List<IssueData> list;
 }
