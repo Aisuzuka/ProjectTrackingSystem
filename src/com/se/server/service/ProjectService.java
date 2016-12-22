@@ -17,7 +17,7 @@ import com.se.server.repository.UserRepository;
 @RestController
 @RequestMapping(value = "/api")
 @Transactional("jpaTransactionManager")
-public class ProjectWebService {
+public class ProjectService {
 	@Autowired
 	IssueGroupRepository issueGroupRepository;
 	@Autowired
