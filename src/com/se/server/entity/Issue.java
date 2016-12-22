@@ -61,7 +61,7 @@ public class Issue {
 	// ok
 	@JoinColumn(name = "PERSONINGHARGEDID")
 	@ManyToOne(cascade = CascadeType.ALL, optional = false)
-	private User personInChagedId;
+	private User personInChargeId;
 
 	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "FINISHTIME")
