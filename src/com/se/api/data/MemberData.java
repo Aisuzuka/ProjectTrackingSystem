@@ -8,5 +8,9 @@ import lombok.Setter;
 public class MemberData {
 	private int userId;
 	private String role;
-	private String isJoined;
+	private boolean isJoined;
+	
+	public boolean getJoined(){
+		return isJoined;
+	}
 }
