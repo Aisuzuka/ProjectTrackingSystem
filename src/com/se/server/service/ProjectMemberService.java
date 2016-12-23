@@ -88,7 +88,7 @@ public class ProjectMemberService {
 		if (isRelationalUser(user, project)) {
 			List<MemberData> listModel = new ArrayList<MemberData>();
 			Set<MemberGroup> list = project.getMemberGroup();
-			for(MemberGroup member : list){
+			for (MemberGroup member : list) {
 				MemberData model = new MemberData();
 				model.setJoined(member.getJoined());
 				model.setRole(member.getRole());
@@ -105,13 +105,14 @@ public class ProjectMemberService {
 	}
 
 	@RequestMapping(value = "/members/{userId}/{projectId}", method = RequestMethod.PUT)
-	public int updateInfo(@PathVariable int userId, @PathVariable int projectId, @RequestBody MemberDetailRequest request) {
+	public int updateInfo(@PathVariable int userId, @PathVariable int projectId,
+			@RequestBody MemberDetailRequest request) {
 		User user = userRepository.findOne(userId);
 		Project project = projectRepository.findOne(projectId);
-		if(isRelationalUser(user, project)){
+		if (isRelationalUser(user, project)) {
 			Set<MemberGroup> list = project.getMemberGroup();
-			for(MemberGroup member : list){
-				if(request.getMember().getUserId() == member.getId()){
+			for (MemberGroup member : list) {
+				if (request.getMember().getUserId() == member.getId()) {
 					list.remove(member);
 					member.setJoined(request.getMember().getJoined());
 					member.setRole(request.getMember().getRole());
@@ -126,23 +127,65 @@ public class ProjectMemberService {
 		}
 	}
 
-//	@RequestMapping(value = "/members/{userId}/{projectId}/{memberId}", method = RequestMethod.PUT)
-//	public void updateUserPermissionByUserId(@PathVariable int userId, @PathVariable int projectId,
-//			@PathVariable int memberId, @RequestBody String member) {
-//
-//	}
+	// @RequestMapping(value = "/members/{userId}/{projectId}/{memberId}",
+	// method = RequestMethod.PUT)
+	// public void updateUserPermissionByUserId(@PathVariable int userId,
+	// @PathVariable int projectId,
+	// @PathVariable int memberId, @RequestBody String member) {
+	//
+	// }
 
-	@RequestMapping(value = "/members/{userId}/{projectId}", method = RequestMethod.DELETE)
-	public void deleteMember(@PathVariable int userId, @PathVariable int projectId) {
-
+	@RequestMapping(value = "/members/{userId}/{delUserId}", method = RequestMethod.DELETE)
+	public int deleteMember(@PathVariable int userId, @PathVariable int projectId, @PathVariable int delUserId) {
+		User user = userRepository.findOne(userId);
+		Project project = projectRepository.findOne(projectId);
+		if (isProjectManager(user, project)) {
+			User delUser = userRepository.findOne(delUserId);
+			Set<MemberGroup> listP = project.getMemberGroup();
+			Set<MemberGroup> listU = delUser.getJoinMemberGroups();
+			MemberGroup member = new MemberGroup();
+			for (MemberGroup item : listU) {
+				if (delUser.getId() == item.getUser().getId()) {
+					member = item;
+					member.setUser(null);
+					member.setProject(null);
+				}
+			}
+			listP = removeRelation(delUser, listP);
+			listU = removeRelation(delUser, listU);
+			
+			project.setMemberGroup(listP);
+			project = projectRepository.save(project);
+			
+			delUser.setJoinMemberGroups(listU);
+			delUser = userRepository.save(delUser);
+			
+			memberGroupRepository.delete(member);
+			return 0;
+		} else {
+			return -1;
+		}
 	}
 
-//	@RequestMapping(value = "/members/{userId}/{projectId}", method = RequestMethod.PUT)
-//	public void replayProjectInvite(@PathVariable int userId, @PathVariable int projectId,
-//			@RequestBody boolean isAccepted) {
-//
-//	}
-	
+	// @RequestMapping(value = "/members/{userId}/{projectId}", method =
+	// RequestMethod.PUT)
+	// public void replayProjectInvite(@PathVariable int userId, @PathVariable
+	// int projectId,
+	// @RequestBody boolean isAccepted) {
+	//
+	// }
+
+	private Set<MemberGroup> removeRelation(User delUser, Set<MemberGroup> list) {
+		for (MemberGroup item : list) {
+			if (delUser.getId() == item.getUser().getId()) {
+				list.remove(item);
+				item.setProject(null);
+				item.setUser(null);
+			}
+		}
+		return list;
+	}
+
 	private boolean isRelationalUser(User user, Project project) {
 		Set<MemberGroup> list = project.getMemberGroup();
 		if (user.getId() == project.getManager().getId()) {
@@ -155,12 +198,11 @@ public class ProjectMemberService {
 		}
 		return false;
 	}
-	
-//	private boolean isProjectManager(User user, Project project) {
-//		Set<MemberGroup> list = project.getMemberGroup();
-//		if (user.getId() == project.getManager().getId()) {
-//			return true;
-//		}
-//		return false;
-//	}
+
+	private boolean isProjectManager(User user, Project project) {
+		if (user.getId() == project.getManager().getId()) {
+			return true;
+		}
+		return false;
+	}
 }
