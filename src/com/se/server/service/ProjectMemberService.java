@@ -67,7 +67,7 @@ public class ProjectMemberService {
 			customer = userRepository.save(customer);
 
 			MemberData model = new MemberData();
-			model.setJoined(member.getJoined());
+			model.setJoined(member.isJoined());
 			model.setRole(member.getRole());
 			model.setUserId(member.getUser().getId());
 
@@ -90,7 +90,7 @@ public class ProjectMemberService {
 			Set<MemberGroup> list = project.getMemberGroup();
 			for (MemberGroup member : list) {
 				MemberData model = new MemberData();
-				model.setJoined(member.getJoined());
+				model.setJoined(member.isJoined());
 				model.setRole(member.getRole());
 				model.setUserId(member.getUser().getId());
 				listModel.add(model);
@@ -112,14 +112,27 @@ public class ProjectMemberService {
 		if (isRelationalUser(user, project)) {
 			Set<MemberGroup> list = project.getMemberGroup();
 			for (MemberGroup member : list) {
-				if (request.getMember().getUserId() == member.getId()) {
-					list.remove(member);
+				if (request.getMember().getUserId() == member.getUser().getId()) {
+//					list.remove(member);
+					//member.setProject(project);
+					//User customer = userRepository.findOne(request.getMember().getUserId());
+					//member.setUser(customer);
 					member.setJoined(request.getMember().getJoined());
 					member.setRole(request.getMember().getRole());
-					list.add(member);
+					member = memberGroupRepository.save(member);
+//					list.add(member);
+//					list = customer.getJoinMemberGroups();
+//					for(MemberGroup memberU : list){
+//						if(customer.getId() == memberU.getProject().getId()){
+//							memberU.setProject(project);
+//							memberU.setJoined(request.getMember().getJoined());
+//							memberU.setRole(request.getMember().getRole());
+//							memberU.setUser(customer);
+//						}
+//					}
 				}
 			}
-			project.setMemberGroup(list);
+//			project.setMemberGroup(list);
 			project = projectRepository.save(project);
 			return 0;
 		} else {
@@ -192,7 +205,7 @@ public class ProjectMemberService {
 			return true;
 		}
 		for (MemberGroup member : list) {
-			if (user.getId() == member.getId()) {
+			if (user.getId() == member.getUser().getId()) {
 				return true;
 			}
 		}

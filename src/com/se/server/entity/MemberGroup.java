@@ -40,8 +40,4 @@ public class MemberGroup {
 	private boolean isJoined;
 	
 
-	public boolean getJoined(){
-		return isJoined;
-	}
-
 }

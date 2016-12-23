@@ -1,5 +1,6 @@
 package com.se.server.service;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -55,7 +56,7 @@ public class UserService {
 	@RequestMapping(value = "/users", method = RequestMethod.POST)
 	public UserSessionResponse createUser(@RequestBody UserCreateRequest request){
 		User user =new User();
-		User exitUser = userRepository.findUserByName(request.getName());
+		User exitUser = userRepository.findByName(request.getName());
 		
 		//check user name is repeat
 		if(exitUser != null){
@@ -67,7 +68,7 @@ public class UserService {
 		user.setName(request.getName());
 		user.setPassword(request.getPassword());
 		user.setEmailAddress(request.getEmailAddress());
-		
+		user.setRole("user");
 		
 		user=userRepository.save(user);
 		
@@ -99,7 +100,8 @@ public class UserService {
 		
 	}
 	
-	@RequestMapping(value = "/users/List/{userId}", method = RequestMethod.GET)
+	
+	@RequestMapping(value = "/users/list/{userId}", method = RequestMethod.GET)
 	public UserListResponse getUserList(@PathVariable int userId){
 		User user =userRepository.findOne(userId);
 		if(user == null){
@@ -108,18 +110,29 @@ public class UserService {
 			response.setList(null);
 			return response;
 		}
-		if(!user.getRole().equals("manager")){
+		if(!user.getRole().equals("SystemManager")){
 			UserListResponse response =new UserListResponse();
 			response.setState(-1);
 			response.setList(null);
 			return response;
 		}
+		
+		
 		UserListResponse response =new UserListResponse();
-		List<UserData> userList = IteratorUtils.toList(userRepository.findAll().iterator());
+		List<User> userList = IteratorUtils.toList(userRepository.findAll().iterator());
+		
+		List<UserData> userDataList =new ArrayList<UserData>();
+		for(User u :userList){
+			UserData userData =new UserData();
+			userData.setName(u.getName());
+			userData.setUserId(u.getId());
+			userData.setUserRole(u.getRole());
+			userDataList.add(userData);
+		}
 		
 		
 		response.setState(0);
-		response.setList(userList);
+		response.setList(userDataList);
 		
 		
 		return response ;
@@ -132,8 +145,9 @@ public class UserService {
 			return -1;
 		}
 		user.setName(request.getName());
-		user.setPassword(request.getPasswrod());
+		user.setPassword(request.getPassword());
 		user.setEmailAddress(request.getEmailAddress());
+		user.setRole(request.getUserRole());
 		userRepository.save(user);
 		
 		return 0;
@@ -148,31 +162,31 @@ public class UserService {
 			return -1;
 		}
 		
-		if(!user.getRole().equals("manager")){
-			return -1;
+		if(!user.getRole().equals("SystemManager")){
+			return -2;
 		}
 		
 		user =userRepository.findOne(delUserId);
 		if(user ==null){
-			return -1;
+			return -3;
 		}
 		
 		Set<Issue> issueList = user.getHandleIssue();
 		
 		if(!issueList.isEmpty()){
-			return -1;
+			return -4;
 		}
 		
 		issueList = user.getResponsibleIssue();
 		
 		if(!issueList.isEmpty()){
-			return -1;
+			return -5;
 		}
 		
 		Set<Project>  projectList = user.getResponsibleProject();
 		
 		if(!projectList.isEmpty()){
-			return -1;
+			return -6;
 		}
 		
 		Set<MemberGroup> memberGroupList =user.getJoinMemberGroups();
@@ -196,7 +210,7 @@ public class UserService {
 	
 	@RequestMapping(value = "/session", method = RequestMethod.POST)
 	public UserSessionResponse login(@RequestBody UserSessionRequest request){
-		User user = userRepository.findUserByName(request.getName());
+		User user = userRepository.findByName(request.getName());
 		
 		if(user == null){
 			UserSessionResponse userSessionResponse = new UserSessionResponse();

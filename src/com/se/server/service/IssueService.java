@@ -41,10 +41,11 @@ public class IssueService {
 	IssueRepository issueRepository;
 
 	@RequestMapping(value = "/issues/{userId}/{projectId}", method = RequestMethod.POST)
-	public void createIssue(@PathVariable int userId, @PathVariable int projectId, @RequestBody IssueRequest request) {
+	public IssueItemResponse createIssue(@PathVariable int userId, @PathVariable int projectId, @RequestBody IssueRequest request) {
+		IssueItemResponse response = new IssueItemResponse();
 		User user = userRepository.findOne(userId);
 		Project project = projectRepository.findOne(projectId);
-
+		User personInCharge = userRepository.findOne(request.getPersonInChargeId());	
 		IssueGroup issueGroup = new IssueGroup();
 		issueGroup.setProject(project);
 		issueGroup = issueGroupRepository.save(issueGroup);
@@ -53,7 +54,7 @@ public class IssueService {
 		issue.setDescription(request.getDescription());
 		issue.setFinishTime(null);
 		issue.setIssueGroup(issueGroup);
-		issue.setPersonInChargeId(null);
+		issue.setPersonInChargeId(personInCharge);
 		issue.setPriority(request.getPriovify());
 		issue.setReporterId(user);
 		issue.setReportTime(new Date());
@@ -64,6 +65,12 @@ public class IssueService {
 
 		issueGroup = addIssue2IssueGroup(issue, issueGroup);
 		project = addIssueGroup2Project(issueGroup, project);
+		
+		IssueData model = generateIssueModel(issue);
+		response.setState(0);
+		response.setIssue(model);
+		
+		return response;
 	}
 
 	@RequestMapping(value = "/issues/{userId}/{issueId}", method = RequestMethod.GET)
@@ -82,7 +89,7 @@ public class IssueService {
 		return response;
 	}
 
-	@RequestMapping(value = "/issues/List/{userId}", method = RequestMethod.GET)
+	@RequestMapping(value = "/issues/list/{userId}", method = RequestMethod.GET)
 	public IssueListResponse getIssueListByUserId(@PathVariable int userId) {
 		IssueListResponse response = new IssueListResponse();
 		User user = userRepository.findOne(userId);
@@ -94,7 +101,7 @@ public class IssueService {
 		return response;
 	}
 
-	@RequestMapping(value = "/issues/List/{userId}/{projectId}", method = RequestMethod.GET)
+	@RequestMapping(value = "/issues/list/{userId}/{projectId}", method = RequestMethod.GET)
 	public IssueListResponse getIssueListByProjectId(@PathVariable int userId, @PathVariable int projectId) {
 		IssueListResponse response = new IssueListResponse();
 		User user = userRepository.findOne(userId);
@@ -202,6 +209,7 @@ public class IssueService {
 
 	private IssueData generateIssueModel(Issue issue) {
 		IssueData model = new IssueData();
+		model.setIssueId(issue.getId());
 		model.setDescription(issue.getDescription());
 		model.setFinishTime(issue.getFinishTime());
 		model.setPersonInChargeId(issue.getPersonInChargeId().getId());

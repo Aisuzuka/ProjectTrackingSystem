@@ -10,8 +10,10 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ProjectData {
+	private int projectId;
 	private String projectName;
 	private String description;
 	private String manager;
 	private Date timeStamp;
+	
 }
