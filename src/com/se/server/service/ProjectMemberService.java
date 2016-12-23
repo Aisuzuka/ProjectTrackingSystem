@@ -126,22 +126,22 @@ public class ProjectMemberService {
 		}
 	}
 
-	@RequestMapping(value = "/members/{userId}/{projectId}/{memberId}", method = RequestMethod.PUT)
-	public void updateUserPermissionByUserId(@PathVariable int userId, @PathVariable int projectId,
-			@PathVariable int memberId, @RequestBody String member) {
-
-	}
+//	@RequestMapping(value = "/members/{userId}/{projectId}/{memberId}", method = RequestMethod.PUT)
+//	public void updateUserPermissionByUserId(@PathVariable int userId, @PathVariable int projectId,
+//			@PathVariable int memberId, @RequestBody String member) {
+//
+//	}
 
 	@RequestMapping(value = "/members/{userId}/{projectId}", method = RequestMethod.DELETE)
 	public void deleteMember(@PathVariable int userId, @PathVariable int projectId) {
 
 	}
 
-	@RequestMapping(value = "/members/{userId}/{projectId}", method = RequestMethod.PUT)
-	public void replayProjectInvite(@PathVariable int userId, @PathVariable int projectId,
-			@RequestBody boolean isAccepted) {
-
-	}
+//	@RequestMapping(value = "/members/{userId}/{projectId}", method = RequestMethod.PUT)
+//	public void replayProjectInvite(@PathVariable int userId, @PathVariable int projectId,
+//			@RequestBody boolean isAccepted) {
+//
+//	}
 	
 	private boolean isRelationalUser(User user, Project project) {
 		Set<MemberGroup> list = project.getMemberGroup();
@@ -156,11 +156,11 @@ public class ProjectMemberService {
 		return false;
 	}
 	
-	private boolean isProjectManager(User user, Project project) {
-		Set<MemberGroup> list = project.getMemberGroup();
-		if (user.getId() == project.getManager().getId()) {
-			return true;
-		}
-		return false;
-	}
+//	private boolean isProjectManager(User user, Project project) {
+//		Set<MemberGroup> list = project.getMemberGroup();
+//		if (user.getId() == project.getManager().getId()) {
+//			return true;
+//		}
+//		return false;
+//	}
 }

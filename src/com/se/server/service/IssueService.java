@@ -3,7 +3,6 @@ package com.se.server.service;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -25,7 +24,6 @@ import com.se.server.entity.Project;
 import com.se.server.entity.User;
 import com.se.server.repository.IssueGroupRepository;
 import com.se.server.repository.IssueRepository;
-import com.se.server.repository.MemberGroupRepository;
 import com.se.server.repository.ProjectRepository;
 import com.se.server.repository.UserRepository;
 
@@ -149,7 +147,7 @@ public class IssueService {
 				newIssue.setDescription(request.getDescription());
 				newIssue.setFinishTime(null);
 				newIssue.setIssueGroup(issueGroup);
-				newIssue.setPersonInChargeId(null);
+				newIssue.setPersonInChargeId(personInCharge);
 				newIssue.setPriority(request.getPriovify());
 				newIssue.setReporterId(user);
 				newIssue.setReportTime(new Date());
