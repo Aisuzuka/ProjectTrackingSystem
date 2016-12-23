@@ -18,7 +18,6 @@ import com.se.api.data.ProjectData;
 import com.se.api.request.ProjectRequest;
 import com.se.api.response.ProjectItemResponse;
 import com.se.api.response.ProjectListResponse;
-import com.se.api.response.UserListResponse;
 import com.se.server.entity.Issue;
 import com.se.server.entity.IssueGroup;
 import com.se.server.entity.MemberGroup;
@@ -135,7 +134,7 @@ public class ProjectService {
 		response.setState(0);
 		response.setList(new ArrayList<ProjectData>());
 		for(MemberGroup memberGroup:memberGroupSet){
-			if(memberGroup.isJoined()){
+			if(memberGroup.getJoined()){
 				ProjectData projectData=new ProjectData();
 				projectData.setDescription(memberGroup.getProject().getDescription());
 				projectData.setProjectName(memberGroup.getProject().getName());	
@@ -175,7 +174,7 @@ public class ProjectService {
 		response.setState(0);
 		response.setList(new ArrayList<ProjectData>());
 		for(MemberGroup memberGroup:memberGroupSet){
-			if(!memberGroup.isJoined()){
+			if(!memberGroup.getJoined()){
 				ProjectData projectData=new ProjectData();
 				projectData.setDescription(memberGroup.getProject().getDescription());
 				projectData.setProjectName(memberGroup.getProject().getName());	
@@ -280,7 +279,7 @@ public class ProjectService {
 			Set<Issue> issueSet = issueGroup.getIssues();
 			for(Issue issue : issueSet){
 				issue.setIssueGroup(null);
-				issue.getPersonInChagedId().getHandleIssue().remove(issue);
+				issue.getPersonInChargeId().getHandleIssue().remove(issue);
 				issue.getReporterId().getResponsibleIssue().remove(issue);
 			}
 			issueGroup.setIssues(null);
