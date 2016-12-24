@@ -25,7 +25,11 @@ import com.se.server.entity.Issue;
 import com.se.server.entity.MemberGroup;
 import com.se.server.entity.Project;
 import com.se.server.entity.User;
-import com.se.server.repository.*;
+import com.se.server.repository.IssueGroupRepository;
+import com.se.server.repository.IssueRepository;
+import com.se.server.repository.MemberGroupRepository;
+import com.se.server.repository.ProjectRepository;
+import com.se.server.repository.UserRepository;
 
 @RestController
 @RequestMapping(value = "/api")
@@ -41,9 +45,9 @@ public class UserService {
 	IssueRepository issueRepository;
 	@Autowired
 	MemberGroupRepository memberGroupRepository;
-	
+
 	@RequestMapping(value = "/register", method = RequestMethod.POST)
-	public int register(int id){
+	public int register(int id) {
 		User user = new User();
 		user.setEmailAddress("test");
 		user.setName("user");
@@ -52,96 +56,91 @@ public class UserService {
 		userRepository.save(user);
 		return 0;
 	}
-	
+
 	@RequestMapping(value = "/users", method = RequestMethod.POST)
-	public UserSessionResponse createUser(@RequestBody UserCreateRequest request){
-		User user =new User();
+	public UserSessionResponse createUser(@RequestBody UserCreateRequest request) {
+		User user = new User();
 		User exitUser = userRepository.findByName(request.getName());
-		
-		//check user name is repeat
-		if(exitUser != null){
-			UserSessionResponse response =new UserSessionResponse();
+
+		// check user name is repeat
+		if (exitUser != null) {
+			UserSessionResponse response = new UserSessionResponse();
 			response.setState(-1);
 			return response;
 		}
-			
+
 		user.setName(request.getName());
 		user.setPassword(request.getPassword());
 		user.setEmailAddress(request.getEmailAddress());
 		user.setRole("user");
-		
-		user=userRepository.save(user);
-		
-		UserSessionResponse response =new UserSessionResponse();
+
+		user = userRepository.save(user);
+
+		UserSessionResponse response = new UserSessionResponse();
 		response.setState(0);
 		response.setUserId(user.getId());
 		return response;
-		
-		
+
 	}
-	
+
 	@RequestMapping(value = "/users/{userId}", method = RequestMethod.GET)
-	public UserDetailResponse getUserInfo(@PathVariable int userId){
-		User user =userRepository.findOne(userId);
-		if(user == null){
-			UserDetailResponse response =new UserDetailResponse();
+	public UserDetailResponse getUserInfo(@PathVariable int userId) {
+		User user = userRepository.findOne(userId);
+		if (user == null) {
+			UserDetailResponse response = new UserDetailResponse();
 			response.setState(-1);
 			return response;
 		}
-		UserDetailResponse response =new UserDetailResponse();
+		UserDetailResponse response = new UserDetailResponse();
 		response.setState(0);
 		response.setUserId(userId);
+		response.setName(user.getName());
 		response.setEmailAddress(user.getEmailAddress());
 		response.setUserRole(user.getRole());
-		
-		return response;
-		
 
-		
+		return response;
+
 	}
-	
-	
+
 	@RequestMapping(value = "/users/list/{userId}", method = RequestMethod.GET)
-	public UserListResponse getUserList(@PathVariable int userId){
-		User user =userRepository.findOne(userId);
-		if(user == null){
-			UserListResponse response =new UserListResponse();
+	public UserListResponse getUserList(@PathVariable int userId) {
+		User user = userRepository.findOne(userId);
+		if (user == null) {
+			UserListResponse response = new UserListResponse();
 			response.setState(-1);
 			response.setList(null);
 			return response;
 		}
-		if(!user.getRole().equals("SystemManager")){
-			UserListResponse response =new UserListResponse();
+		if (!user.getRole().equals("SystemManager")) {
+			UserListResponse response = new UserListResponse();
 			response.setState(-1);
 			response.setList(null);
 			return response;
 		}
-		
-		
-		UserListResponse response =new UserListResponse();
+
+		UserListResponse response = new UserListResponse();
 		List<User> userList = IteratorUtils.toList(userRepository.findAll().iterator());
-		
-		List<UserData> userDataList =new ArrayList<UserData>();
-		for(User u :userList){
-			UserData userData =new UserData();
+
+		List<UserData> userDataList = new ArrayList<UserData>();
+		for (User u : userList) {
+			UserData userData = new UserData();
 			userData.setName(u.getName());
 			userData.setUserId(u.getId());
 			userData.setUserRole(u.getRole());
+			userData.setEmailAddress(u.getEmailAddress());
 			userDataList.add(userData);
 		}
-		
-		
+
 		response.setState(0);
 		response.setList(userDataList);
-		
-		
-		return response ;
+
+		return response;
 	}
-	
+
 	@RequestMapping(value = "/users/{userId}", method = RequestMethod.PUT)
-	public int  updateUserInfo(@PathVariable int userId,@RequestBody UserDetailRequest request){
-		User user =userRepository.findOne(userId);
-		if(user == null){
+	public int updateUserInfo(@PathVariable int userId, @RequestBody UserDetailRequest request) {
+		User user = userRepository.findOne(userId);
+		if (user == null) {
 			return -1;
 		}
 		user.setName(request.getName());
@@ -149,90 +148,84 @@ public class UserService {
 		user.setEmailAddress(request.getEmailAddress());
 		user.setRole(request.getUserRole());
 		userRepository.save(user);
-		
+
 		return 0;
-		
-		
+
 	}
-	
+
 	@RequestMapping(value = "/users/{userId}/{delUserId}", method = RequestMethod.DELETE)
-	public int deleteUserInfo(@PathVariable int userId,@PathVariable int delUserId){
-		User user =userRepository.findOne(userId);
-		if(user ==null){
+	public int deleteUserInfo(@PathVariable int userId, @PathVariable int delUserId) {
+		User user = userRepository.findOne(userId);
+		if (user == null) {
 			return -1;
 		}
-		
-		if(!user.getRole().equals("SystemManager")){
+
+		if (!user.getRole().equals("SystemManager")) {
 			return -2;
 		}
-		
-		user =userRepository.findOne(delUserId);
-		if(user ==null){
+
+		user = userRepository.findOne(delUserId);
+		if (user == null) {
 			return -3;
 		}
-		
+
 		Set<Issue> issueList = user.getHandleIssue();
-		
-		if(!issueList.isEmpty()){
+
+		if (!issueList.isEmpty()) {
 			return -4;
 		}
-		
+
 		issueList = user.getResponsibleIssue();
-		
-		if(!issueList.isEmpty()){
+
+		if (!issueList.isEmpty()) {
 			return -5;
 		}
-		
-		Set<Project>  projectList = user.getResponsibleProject();
-		
-		if(!projectList.isEmpty()){
+
+		Set<Project> projectList = user.getResponsibleProject();
+
+		if (!projectList.isEmpty()) {
 			return -6;
 		}
-		
-		Set<MemberGroup> memberGroupList =user.getJoinMemberGroups();
-		
-		for(MemberGroup memberGroup:memberGroupList){
+
+		Set<MemberGroup> memberGroupList = user.getJoinMemberGroups();
+
+		for (MemberGroup memberGroup : memberGroupList) {
 			Iterator<MemberGroup> memberGroupIterator = memberGroup.getProject().getMemberGroup().iterator();
-			while(memberGroupIterator.hasNext()){
-				if(memberGroupIterator.next().getId() == user.getId()){
+			while (memberGroupIterator.hasNext()) {
+				if (memberGroupIterator.next().getId() == user.getId()) {
 					memberGroupIterator.remove();
 				}
 				memberGroup.setProject(null);
 			}
 		}
-		
+
 		userRepository.delete(user.getId());
-		
-		
+
 		return 0;
-		
+
 	}
-	
+
 	@RequestMapping(value = "/session", method = RequestMethod.POST)
-	public UserSessionResponse login(@RequestBody UserSessionRequest request){
+	public UserSessionResponse login(@RequestBody UserSessionRequest request) {
 		User user = userRepository.findByName(request.getName());
-		
-		if(user == null){
+
+		if (user == null) {
 			UserSessionResponse userSessionResponse = new UserSessionResponse();
 			userSessionResponse.setState(-1);
 			return userSessionResponse;
 		}
-		
-		if(user.getPassword().equals(request.getPassword())){
+
+		if (user.getPassword().equals(request.getPassword())) {
 			UserSessionResponse userSessionResponse = new UserSessionResponse();
 			userSessionResponse.setState(0);
 			userSessionResponse.setUserId(user.getId());
 			return userSessionResponse;
-		}else{
+		} else {
 			UserSessionResponse userSessionResponse = new UserSessionResponse();
 			userSessionResponse.setState(-1);
 			return userSessionResponse;
 		}
-		
-		
-		
-		
+
 	}
-	
 
 }
