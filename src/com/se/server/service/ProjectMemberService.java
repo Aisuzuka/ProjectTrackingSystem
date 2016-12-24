@@ -152,7 +152,7 @@ public class ProjectMemberService {
 			return -1;
 		else if (isNull(project))
 			return -1;
-		else if(isNull(delUser))
+		else if (isNull(delUser))
 			return -1;
 		else if (isProjectManager(user, project)) {
 			Set<MemberGroup> listP = project.getMemberGroup();
@@ -202,16 +202,12 @@ public class ProjectMemberService {
 
 	private boolean isRelationalUser(User user, Project project) {
 		Set<MemberGroup> list = project.getMemberGroup();
-		if (user.getId() == project.getManager().getId()) {
-			return true;
-		} else {
-			for (MemberGroup member : list) {
-				if (user.getId() == member.getUser().getId()) {
-					return true;
-				}
+		for (MemberGroup member : list) {
+			if (user.getId() == member.getUser().getId()) {
+				return true;
 			}
-			return false;
 		}
+		return false;
 	}
 
 	private boolean isProjectManager(User user, Project project) {

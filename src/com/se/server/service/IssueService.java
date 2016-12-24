@@ -46,13 +46,14 @@ public class IssueService {
 		IssueItemResponse response = new IssueItemResponse();
 		User user = userRepository.findOne(userId);
 		Project project = projectRepository.findOne(projectId);
-//		User personInCharge = userRepository.findOne(request.getPersonInChargeId());
+		// User personInCharge =
+		// userRepository.findOne(request.getPersonInChargeId());
 		if (isNull(user))
 			response.setState(-1);
 		else if (isNull(project))
 			response.setState(-1);
-//		else if (isNull(personInCharge))
-//			response.setState(-1);
+		// else if (isNull(personInCharge))
+		// response.setState(-1);
 		else {
 			IssueGroup issueGroup = new IssueGroup();
 			issueGroup.setProject(project);
@@ -158,7 +159,33 @@ public class IssueService {
 			return -1;
 		else if (isNull(projectManager))
 			return -1;
-		else if (isReporter(user, issue) || isProjectManager(user, issue)) {
+		else if (isPersonInCharge(user, issue)) {
+			issue.setFinishTime(new Date());
+			issue = issueRepository.save(issue);
+
+			IssueGroup issueGroup = issueGroupRepository.findOne(issue.getIssueGroup().getId());
+			Project project = projectRepository.findOne(issueGroup.getProject().getId());
+			Issue newIssue = new Issue();
+			newIssue.setDescription(request.getDescription());
+			newIssue.setFinishTime(null);
+			newIssue.setIssueGroup(issueGroup);
+			User personInCharge = userRepository.findOne(request.getPersonInChargeId());
+			if (isNull(personInCharge)) {
+				return -1;
+			}
+			newIssue.setPersonInChargeId(personInCharge);
+			newIssue.setPriority(request.getPriovify());
+			newIssue.setReporterId(user);
+			newIssue.setReportTime(new Date());
+			newIssue.setServerity(request.getServerity());
+			newIssue.setState(request.getState());
+			newIssue.setTitle(request.getTitle());
+			newIssue = issueRepository.save(newIssue);
+
+			issueGroup = addIssue2IssueGroup(newIssue, issueGroup);
+			project = addIssueGroup2Project(issueGroup, project);
+			return 0;
+		} else if (isReporter(user, issue) || isProjectManager(user, issue)) {
 			issue.setDescription(request.getDescription());
 			issue.setPriority(request.getPriovify());
 			issue.setServerity(request.getServerity());
@@ -168,35 +195,7 @@ public class IssueService {
 			issue = issueRepository.save(issue);
 			return 0;
 		} else {
-			if (isPersonInCharge(user, issue)) {
-				issue.setFinishTime(new Date());
-				issue = issueRepository.save(issue);
-
-				IssueGroup issueGroup = issueGroupRepository.findOne(issue.getIssueGroup().getId());
-				Project project = projectRepository.findOne(issueGroup.getProject().getId());
-				Issue newIssue = new Issue();
-				newIssue.setDescription(request.getDescription());
-				newIssue.setFinishTime(null);
-				newIssue.setIssueGroup(issueGroup);
-				User personInCharge = userRepository.findOne(request.getPersonInChargeId());
-				if(isNull(personInCharge)){
-					return -1;
-				}
-				newIssue.setPersonInChargeId(personInCharge);
-				newIssue.setPriority(request.getPriovify());
-				newIssue.setReporterId(user);
-				newIssue.setReportTime(new Date());
-				newIssue.setServerity(request.getServerity());
-				newIssue.setState(request.getState());
-				newIssue.setTitle(request.getTitle());
-				newIssue = issueRepository.save(newIssue);
-
-				issueGroup = addIssue2IssueGroup(newIssue, issueGroup);
-				project = addIssueGroup2Project(issueGroup, project);
-				return 0;
-			} else {
-				return -1;
-			}
+			return -1;
 		}
 	}
 
