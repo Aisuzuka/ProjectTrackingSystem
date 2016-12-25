@@ -219,6 +219,7 @@ public class UserService {
 			UserSessionResponse userSessionResponse = new UserSessionResponse();
 			userSessionResponse.setState(0);
 			userSessionResponse.setUserId(user.getId());
+			userSessionResponse.setUserRole(user.getRole());
 			return userSessionResponse;
 		} else {
 			UserSessionResponse userSessionResponse = new UserSessionResponse();
