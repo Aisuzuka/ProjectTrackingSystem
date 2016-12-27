@@ -8,6 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class IssueData {
+	private int issueId;
 	private String title;
 	private String description;
 	private String state;

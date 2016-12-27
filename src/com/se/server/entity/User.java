@@ -51,7 +51,7 @@ public class User {
 	private Set<Issue> responsibleIssue=new HashSet<Issue>();
 	
 	//ok
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="personInChagedId", orphanRemoval=true)
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="personInChargeId", orphanRemoval=true)
 	private Set<Issue> handleIssue= new HashSet<Issue>();
  	
 	

@@ -18,7 +18,6 @@ import com.se.api.data.ProjectData;
 import com.se.api.request.ProjectRequest;
 import com.se.api.response.ProjectItemResponse;
 import com.se.api.response.ProjectListResponse;
-import com.se.api.response.UserListResponse;
 import com.se.server.entity.Issue;
 import com.se.server.entity.IssueGroup;
 import com.se.server.entity.MemberGroup;
@@ -49,23 +48,37 @@ public class ProjectService {
 	public ProjectItemResponse createProject(@PathVariable int userId,@RequestBody ProjectRequest request ){
 		
 		User user =userRepository.findOne(userId);
-		if(user != null && !user.getRole().equals("manager")){
+		if(user != null && !user.getRole().equals("SystemManager")){
 			Project project  = new Project();
 			project.setName(request.getProjectName());
 			project.setDescription(request.getDescription());
 			project.setTimeStamp(new Date());
 			project.setManager(user);
 			user.getResponsibleProject().add(project);
-			userRepository.save(user);
+			//userRepository.save(user);
+			
+			MemberGroup memberGroup  = new MemberGroup();
+			
+			
+			memberGroup.setUser(user);
+			memberGroup.setRole("ProjectManager");
+			memberGroup.setProject(project);
+			memberGroup.setJoined(true);
+			project.getMemberGroup().add(memberGroup);
+			user.getJoinMemberGroups().add(memberGroup);
+			
+			project = projectRepository.save(project);
 			
 			ProjectItemResponse  response = new ProjectItemResponse();
 			response.setState(0);
 			
 			ProjectData projectData=new ProjectData();
+			projectData.setProjectId(project.getId());
 			projectData.setDescription(project.getDescription());
 			projectData.setProjectName(project.getName());	
 			projectData.setManager(user.getName());
 			projectData.setTimeStamp(project.getTimeStamp());
+			response.setProject(projectData);
 			return response;
 		}else{
 			
@@ -93,19 +106,23 @@ public class ProjectService {
 				break;
 			}
 		}
+		if(project.getManager().getId()==userId)findUser =true;
 		if(!findUser){
 			ProjectItemResponse  response = new ProjectItemResponse();
-			response.setState(-1);
+			response.setState(-2);
 			return response;
 		}else{
 			ProjectItemResponse  response = new ProjectItemResponse();
 			response.setState(0);
 			
 			ProjectData projectData=new ProjectData();
+			projectData.setProjectId(project.getId());
 			projectData.setDescription(project.getDescription());
 			projectData.setProjectName(project.getName());	
 			projectData.setManager(project.getManager().getName());
 			projectData.setTimeStamp(project.getTimeStamp());
+			response.setProject(projectData);
+			
 			return response;
 		}
 		
@@ -126,7 +143,7 @@ public class ProjectService {
 		Set<MemberGroup> memberGroupSet =user.getJoinMemberGroups();
 		if(memberGroupSet.isEmpty()){
 			ProjectListResponse response =new ProjectListResponse();
-			response.setState(0);
+			response.setState(-2);
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
@@ -135,6 +152,7 @@ public class ProjectService {
 		response.setState(0);
 		response.setList(new ArrayList<ProjectData>());
 		for(MemberGroup memberGroup:memberGroupSet){
+			//System.out.println("gggggggggg");
 			if(memberGroup.isJoined()){
 				ProjectData projectData=new ProjectData();
 				projectData.setDescription(memberGroup.getProject().getDescription());
@@ -166,7 +184,7 @@ public class ProjectService {
 		Set<MemberGroup> memberGroupSet =user.getJoinMemberGroups();
 		if(memberGroupSet.isEmpty()){
 			ProjectListResponse response =new ProjectListResponse();
-			response.setState(0);
+			response.setState(-2);
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
@@ -177,6 +195,7 @@ public class ProjectService {
 		for(MemberGroup memberGroup:memberGroupSet){
 			if(!memberGroup.isJoined()){
 				ProjectData projectData=new ProjectData();
+				projectData.setProjectId(memberGroup.getProject().getId());
 				projectData.setDescription(memberGroup.getProject().getDescription());
 				projectData.setProjectName(memberGroup.getProject().getName());	
 				projectData.setManager(memberGroup.getProject().getManager().getName());
@@ -198,7 +217,7 @@ public class ProjectService {
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
-		if(!user.getRole().equals("manager")){
+		if(!user.getRole().equals("SystemManager")){
 			ProjectListResponse response =new ProjectListResponse();
 			response.setState(-1);
 			response.setList(new ArrayList<ProjectData>());
@@ -211,6 +230,7 @@ public class ProjectService {
 		response.setList(new ArrayList<ProjectData>());
 		for(Project project : projectList){
 			ProjectData projectData=new ProjectData();
+			projectData.setProjectId(project.getId());
 			projectData.setDescription(project.getDescription());
 			projectData.setProjectName(project.getName());	
 			projectData.setManager(project.getManager().getName());
@@ -280,7 +300,7 @@ public class ProjectService {
 			Set<Issue> issueSet = issueGroup.getIssues();
 			for(Issue issue : issueSet){
 				issue.setIssueGroup(null);
-				issue.getPersonInChagedId().getHandleIssue().remove(issue);
+				issue.getPersonInChargeId().getHandleIssue().remove(issue);
 				issue.getReporterId().getResponsibleIssue().remove(issue);
 			}
 			issueGroup.setIssues(null);
