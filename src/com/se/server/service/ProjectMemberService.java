@@ -112,7 +112,7 @@ public class ProjectMemberService {
 		return response;
 	}
 
-	@RequestMapping(value = "/members/{userId}/{projectId}", method = RequestMethod.PUT)
+	@RequestMapping(value = "/members/put/{userId}/{projectId}", method = RequestMethod.POST)
 	public int updateInfo(@PathVariable int userId, @PathVariable int projectId,
 			@RequestBody MemberDetailRequest request) {
 		User user = userRepository.findOne(userId);
@@ -143,7 +143,7 @@ public class ProjectMemberService {
 	//
 	// }
 
-	@RequestMapping(value = "/members/{userId}/{projectId}/{delUserId}", method = RequestMethod.DELETE)
+	@RequestMapping(value = "/members/delete/{userId}/{projectId}/{delUserId}", method = RequestMethod.POST)
 	public int deleteMember(@PathVariable int userId, @PathVariable int projectId, @PathVariable int delUserId) {
 		User user = userRepository.findOne(userId);
 		Project project = projectRepository.findOne(projectId);
