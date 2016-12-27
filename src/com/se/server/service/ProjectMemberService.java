@@ -158,15 +158,15 @@ public class ProjectMemberService {
 			Set<MemberGroup> listP = project.getMemberGroup();
 			Set<MemberGroup> listU = delUser.getJoinMemberGroups();
 			MemberGroup member = new MemberGroup();
-			for (MemberGroup item : listU) {
+			for (MemberGroup item : listP) {
 				if (delUser.getId() == item.getUser().getId()) {
 					member = item;
-					member.setUser(null);
-					member.setProject(null);
 				}
 			}
-			listP = removeRelation(delUser, listP);
-			listU = removeRelation(delUser, listU);
+			delUser.getJoinMemberGroups().remove(member);
+			project.getMemberGroup().remove(member);
+			member.setProject(null);
+			member.setUser(null);
 
 			project.setMemberGroup(listP);
 			project = projectRepository.save(project);
@@ -189,14 +189,8 @@ public class ProjectMemberService {
 	//
 	// }
 
-	private Set<MemberGroup> removeRelation(User delUser, Set<MemberGroup> list) {
-		for (MemberGroup item : list) {
-			if (delUser.getId() == item.getUser().getId()) {
-				list.remove(item);
-				item.setProject(null);
-				item.setUser(null);
-			}
-		}
+	private Set<MemberGroup> removeRelation(MemberGroup member, Set<MemberGroup> list) {
+		list.remove(member);
 		return list;
 	}
 
