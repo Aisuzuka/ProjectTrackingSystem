@@ -232,8 +232,9 @@ public class IssueService {
 
 	private IssueData generateIssueModel(Issue issue) {
 		IssueData model = new IssueData();
-		model.setIssueGroupId(issue.getIssueGroup().getId());
 		model.setIssueId(issue.getId());
+		model.setIssueGroupId(issue.getIssueGroup().getId());
+		model.setProjectId(issue.getIssueGroup().getProject().getId());
 		model.setDescription(issue.getDescription());
 		model.setFinishTime(issue.getFinishTime());
 		model.setPersonInChargeId(issue.getPersonInChargeId().getId());
