@@ -118,6 +118,7 @@ public class ProjectMemberService {
 					//User customer = userRepository.findOne(request.getMember().getUserId());
 					//member.setUser(customer);
 					member.setJoined(request.getMember().getJoined());
+					//member.setJoined(true);
 					member.setRole(request.getMember().getRole());
 					member = memberGroupRepository.save(member);
 //					list.add(member);
@@ -133,7 +134,7 @@ public class ProjectMemberService {
 				}
 			}
 //			project.setMemberGroup(list);
-			project = projectRepository.save(project);
+//			project = projectRepository.save(project);
 			return 0;
 		} else {
 			return -1;
