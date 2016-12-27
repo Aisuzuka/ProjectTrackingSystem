@@ -43,262 +43,255 @@ public class ProjectService {
 	IssueRepository issueRepository;
 	@Autowired
 	MemberGroupRepository memberGroupRepository;
-	
+
 	@RequestMapping(value = "/projects/{userId}", method = RequestMethod.POST)
-	public ProjectItemResponse createProject(@PathVariable int userId,@RequestBody ProjectRequest request ){
-		
-		User user =userRepository.findOne(userId);
-		if(user != null && !user.getRole().equals("SystemManager")){
-			Project project  = new Project();
+	public ProjectItemResponse createProject(@PathVariable int userId, @RequestBody ProjectRequest request) {
+
+		User user = userRepository.findOne(userId);
+		if (user != null && !user.getRole().equals("SystemManager")) {
+			Project project = new Project();
 			project.setName(request.getProjectName());
 			project.setDescription(request.getDescription());
 			project.setTimeStamp(new Date());
 			project.setManager(user);
 			user.getResponsibleProject().add(project);
-			//userRepository.save(user);
-			
-			MemberGroup memberGroup  = new MemberGroup();
-			
-			
+			// userRepository.save(user);
+
+			MemberGroup memberGroup = new MemberGroup();
+
 			memberGroup.setUser(user);
 			memberGroup.setRole("ProjectManager");
 			memberGroup.setProject(project);
 			memberGroup.setJoined(true);
 			project.getMemberGroup().add(memberGroup);
 			user.getJoinMemberGroups().add(memberGroup);
-			
+
 			project = projectRepository.save(project);
-			
-			ProjectItemResponse  response = new ProjectItemResponse();
+
+			ProjectItemResponse response = new ProjectItemResponse();
 			response.setState(0);
-			
-			ProjectData projectData=new ProjectData();
+
+			ProjectData projectData = new ProjectData();
 			projectData.setProjectId(project.getId());
 			projectData.setDescription(project.getDescription());
-			projectData.setProjectName(project.getName());	
+			projectData.setProjectName(project.getName());
 			projectData.setManager(user.getName());
 			projectData.setTimeStamp(project.getTimeStamp());
 			response.setProject(projectData);
 			return response;
-		}else{
-			
-			ProjectItemResponse  response = new ProjectItemResponse();
+		} else {
+
+			ProjectItemResponse response = new ProjectItemResponse();
 			response.setState(-1);
 			return response;
 		}
-		
-		
+
 	}
-	
+
 	@RequestMapping(value = "/projects/{userId}/{projectId}", method = RequestMethod.GET)
-	public ProjectItemResponse getProjectInfo(@PathVariable int userId,@PathVariable int projectId){
+	public ProjectItemResponse getProjectInfo(@PathVariable int userId, @PathVariable int projectId) {
 		Project project = projectRepository.findOne(projectId);
-		if(project == null){
-			ProjectItemResponse  response = new ProjectItemResponse();
+		if (project == null) {
+			ProjectItemResponse response = new ProjectItemResponse();
 			response.setState(-1);
 			return response;
 		}
-		Set<MemberGroup> memberGroupSet= project.getMemberGroup();
-		boolean findUser =false;
-		for(MemberGroup memberGroup:memberGroupSet){
-			if(memberGroup.getUser().getId()==userId){
-				findUser =true;
+		Set<MemberGroup> memberGroupSet = project.getMemberGroup();
+		boolean findUser = false;
+		for (MemberGroup memberGroup : memberGroupSet) {
+			if (memberGroup.getUser().getId() == userId) {
+				findUser = true;
 				break;
 			}
 		}
-		if(project.getManager().getId()==userId)findUser =true;
-		if(!findUser){
-			ProjectItemResponse  response = new ProjectItemResponse();
+		if (project.getManager().getId() == userId)
+			findUser = true;
+		if (!findUser) {
+			ProjectItemResponse response = new ProjectItemResponse();
 			response.setState(-2);
 			return response;
-		}else{
-			ProjectItemResponse  response = new ProjectItemResponse();
+		} else {
+			ProjectItemResponse response = new ProjectItemResponse();
 			response.setState(0);
-			
-			ProjectData projectData=new ProjectData();
+
+			ProjectData projectData = new ProjectData();
 			projectData.setProjectId(project.getId());
 			projectData.setDescription(project.getDescription());
-			projectData.setProjectName(project.getName());	
+			projectData.setProjectName(project.getName());
 			projectData.setManager(project.getManager().getName());
 			projectData.setTimeStamp(project.getTimeStamp());
 			response.setProject(projectData);
-			
+
 			return response;
 		}
-		
-		
-		
+
 	}
-	
+
 	@RequestMapping(value = "/projects/list/{userId}", method = RequestMethod.GET)
-	public ProjectListResponse getProjectListByUserId(@PathVariable int userId){
-		User user =userRepository.findOne(userId);
-		if(user== null){
-			ProjectListResponse response =new ProjectListResponse();
+	public ProjectListResponse getProjectListByUserId(@PathVariable int userId) {
+		User user = userRepository.findOne(userId);
+		if (user == null) {
+			ProjectListResponse response = new ProjectListResponse();
 			response.setState(-1);
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
-		
-		Set<MemberGroup> memberGroupSet =user.getJoinMemberGroups();
-		if(memberGroupSet.isEmpty()){
-			ProjectListResponse response =new ProjectListResponse();
+
+		Set<MemberGroup> memberGroupSet = user.getJoinMemberGroups();
+		if (memberGroupSet.isEmpty()) {
+			ProjectListResponse response = new ProjectListResponse();
 			response.setState(-2);
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
-		
-		ProjectListResponse response =new ProjectListResponse();
+
+		ProjectListResponse response = new ProjectListResponse();
 		response.setState(0);
 		response.setList(new ArrayList<ProjectData>());
-		for(MemberGroup memberGroup:memberGroupSet){
-			//System.out.println("gggggggggg");
-			if(memberGroup.isJoined()){
-				ProjectData projectData=new ProjectData();
-				projectData.setDescription(memberGroup.getProject().getDescription());
-				projectData.setProjectName(memberGroup.getProject().getName());	
-				projectData.setManager(memberGroup.getProject().getManager().getName());
-				projectData.setTimeStamp(memberGroup.getProject().getTimeStamp());
-				response.getList().add(projectData);
-			}
-			
-			
-		}
-		return response;
-		
-		
-		
-		
-	}
-	
-	@RequestMapping(value = "/projects/{userId}", method = RequestMethod.GET)
-	public ProjectListResponse getInvitedProjectListByUserId(@PathVariable int userId){
-		User user =userRepository.findOne(userId);
-		if(user== null){
-			ProjectListResponse response =new ProjectListResponse();
-			response.setState(-1);
-			response.setList(new ArrayList<ProjectData>());
-			return response;
-		}
-		
-		Set<MemberGroup> memberGroupSet =user.getJoinMemberGroups();
-		if(memberGroupSet.isEmpty()){
-			ProjectListResponse response =new ProjectListResponse();
-			response.setState(-2);
-			response.setList(new ArrayList<ProjectData>());
-			return response;
-		}
-		
-		ProjectListResponse response =new ProjectListResponse();
-		response.setState(0);
-		response.setList(new ArrayList<ProjectData>());
-		for(MemberGroup memberGroup:memberGroupSet){
-			if(!memberGroup.isJoined()){
-				ProjectData projectData=new ProjectData();
+		for (MemberGroup memberGroup : memberGroupSet) {
+			// System.out.println("gggggggggg");
+			if (memberGroup.isJoined()) {
+				ProjectData projectData = new ProjectData();
 				projectData.setProjectId(memberGroup.getProject().getId());
 				projectData.setDescription(memberGroup.getProject().getDescription());
-				projectData.setProjectName(memberGroup.getProject().getName());	
+				projectData.setProjectName(memberGroup.getProject().getName());
 				projectData.setManager(memberGroup.getProject().getManager().getName());
 				projectData.setTimeStamp(memberGroup.getProject().getTimeStamp());
 				response.getList().add(projectData);
 			}
-			
-			
+
 		}
 		return response;
+
 	}
-	
-	@RequestMapping(value = "/all-projects/{userId}", method = RequestMethod.GET)
-	public ProjectListResponse getAllProjectList(@PathVariable int userId){
-		User user =userRepository.findOne(userId);
-		if(user== null){
-			ProjectListResponse response =new ProjectListResponse();
+
+	@RequestMapping(value = "/projects/{userId}", method = RequestMethod.GET)
+	public ProjectListResponse getInvitedProjectListByUserId(@PathVariable int userId) {
+		User user = userRepository.findOne(userId);
+		if (user == null) {
+			ProjectListResponse response = new ProjectListResponse();
 			response.setState(-1);
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
-		if(!user.getRole().equals("SystemManager")){
-			ProjectListResponse response =new ProjectListResponse();
+
+		Set<MemberGroup> memberGroupSet = user.getJoinMemberGroups();
+		if (memberGroupSet.isEmpty()) {
+			ProjectListResponse response = new ProjectListResponse();
+			response.setState(-2);
+			response.setList(new ArrayList<ProjectData>());
+			return response;
+		}
+
+		ProjectListResponse response = new ProjectListResponse();
+		response.setState(0);
+		response.setList(new ArrayList<ProjectData>());
+		for (MemberGroup memberGroup : memberGroupSet) {
+			if (!memberGroup.isJoined()) {
+				ProjectData projectData = new ProjectData();
+				projectData.setProjectId(memberGroup.getProject().getId());
+				projectData.setDescription(memberGroup.getProject().getDescription());
+				projectData.setProjectName(memberGroup.getProject().getName());
+				projectData.setManager(memberGroup.getProject().getManager().getName());
+				projectData.setTimeStamp(memberGroup.getProject().getTimeStamp());
+				response.getList().add(projectData);
+			}
+
+		}
+		return response;
+	}
+
+	@RequestMapping(value = "/all-projects/{userId}", method = RequestMethod.GET)
+	public ProjectListResponse getAllProjectList(@PathVariable int userId) {
+		User user = userRepository.findOne(userId);
+		if (user == null) {
+			ProjectListResponse response = new ProjectListResponse();
+			response.setState(-1);
+			response.setList(new ArrayList<ProjectData>());
+			return response;
+		}
+		if (!user.getRole().equals("SystemManager")) {
+			ProjectListResponse response = new ProjectListResponse();
 			response.setState(-1);
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
 		List<Project> projectList = IteratorUtils.toList(projectRepository.findAll().iterator());
-		
-		ProjectListResponse response =new ProjectListResponse();
+
+		ProjectListResponse response = new ProjectListResponse();
 		response.setState(0);
 		response.setList(new ArrayList<ProjectData>());
-		for(Project project : projectList){
-			ProjectData projectData=new ProjectData();
+		for (Project project : projectList) {
+			ProjectData projectData = new ProjectData();
 			projectData.setProjectId(project.getId());
 			projectData.setDescription(project.getDescription());
-			projectData.setProjectName(project.getName());	
+			projectData.setProjectName(project.getName());
 			projectData.setManager(project.getManager().getName());
 			projectData.setTimeStamp(project.getTimeStamp());
 			response.getList().add(projectData);
 		}
 		return response;
-		
+
 	}
-	
+
 	@RequestMapping(value = "/projects/{userId}/{projectId}", method = RequestMethod.PUT)
-	public int updateProjectInfo(@PathVariable int userId,@PathVariable int projectId,@RequestBody ProjectRequest request){
+	public int updateProjectInfo(@PathVariable int userId, @PathVariable int projectId,
+			@RequestBody ProjectRequest request) {
 		Project project = projectRepository.findOne(projectId);
-		if(project == null){
+		if (project == null) {
 			return -1;
 		}
-		Set<MemberGroup> memberGroupSet= project.getMemberGroup();
-		boolean findUser =false;
-		for(MemberGroup memberGroup:memberGroupSet){
-			if(memberGroup.getUser().getId()==userId){
-				findUser =true;
+		Set<MemberGroup> memberGroupSet = project.getMemberGroup();
+		boolean findUser = false;
+		for (MemberGroup memberGroup : memberGroupSet) {
+			if (memberGroup.getUser().getId() == userId) {
+				findUser = true;
 				break;
 			}
 		}
-		if(!findUser){
+		if (!findUser) {
 			return -1;
 		}
-		
+
 		project.setDescription(request.getDescription());
 		project.setName(request.getProjectName());
-		
+
 		projectRepository.save(project);
 		return 0;
 	}
-	
+
 	@RequestMapping(value = "/projects/{userId}/{projectId}", method = RequestMethod.DELETE)
-	public int deleteProject(@PathVariable int userId,@PathVariable int projectId){
+	public int deleteProject(@PathVariable int userId, @PathVariable int projectId) {
 		Project project = projectRepository.findOne(projectId);
-		if(project == null){
+		if (project == null) {
 			return -1;
 		}
-		Set<MemberGroup> memberGroupSet= project.getMemberGroup();
-		boolean findUser =false;
-		for(MemberGroup memberGroup:memberGroupSet){
-			if(memberGroup.getUser().getId()==userId){
-				findUser =true;
+		Set<MemberGroup> memberGroupSet = project.getMemberGroup();
+		boolean findUser = false;
+		for (MemberGroup memberGroup : memberGroupSet) {
+			if (memberGroup.getUser().getId() == userId) {
+				findUser = true;
 				break;
 			}
 		}
-		if(!findUser){
+		if (!findUser) {
 			return -1;
 		}
-		
-		memberGroupSet=project.getMemberGroup();
-		for(MemberGroup memberGroup:memberGroupSet){
+
+		memberGroupSet = project.getMemberGroup();
+		for (MemberGroup memberGroup : memberGroupSet) {
 			memberGroup.getUser().getJoinMemberGroups().remove(memberGroup);
 			memberGroup.setUser(null);
 		}
-		
-		User manager =project.getManager();
+
+		User manager = project.getManager();
 		manager.getResponsibleProject().remove(manager);
 		project.setManager(null);
-		
-		
+
 		Set<IssueGroup> issueGroupSet = project.getIssueGroup();
-		for(IssueGroup issueGroup:issueGroupSet){
+		for (IssueGroup issueGroup : issueGroupSet) {
 			Set<Issue> issueSet = issueGroup.getIssues();
-			for(Issue issue : issueSet){
+			for (Issue issue : issueSet) {
 				issue.setIssueGroup(null);
 				issue.getPersonInChargeId().getHandleIssue().remove(issue);
 				issue.getReporterId().getResponsibleIssue().remove(issue);
@@ -306,11 +299,9 @@ public class ProjectService {
 			issueGroup.setIssues(null);
 		}
 		project.setIssueGroup(null);
-		
+
 		projectRepository.delete(project.getId());
-		
-		
-		
+
 		return 0;
 	}
 }

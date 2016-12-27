@@ -73,7 +73,7 @@ public class ProjectMemberService {
 			customer = userRepository.save(customer);
 
 			MemberData model = new MemberData();
-			model.setJoined(member.isJoined());
+			model.setIsJoined(member.isJoined() ? "1" : "0");
 			model.setRole(member.getRole());
 			model.setUserId(member.getUser().getId());
 
@@ -99,7 +99,7 @@ public class ProjectMemberService {
 			Set<MemberGroup> list = project.getMemberGroup();
 			for (MemberGroup member : list) {
 				MemberData model = new MemberData();
-				model.setJoined(member.isJoined());
+				model.setIsJoined(member.isJoined() ? "1" : "0");
 				model.setRole(member.getRole());
 				model.setUserId(member.getUser().getId());
 				listModel.add(model);
@@ -125,7 +125,7 @@ public class ProjectMemberService {
 			Set<MemberGroup> list = project.getMemberGroup();
 			for (MemberGroup member : list) {
 				if (request.getMember().getUserId() == member.getUser().getId()) {
-					member.setJoined(request.getMember().getJoined());
+					member.setJoined(request.getMember().getIsJoined().equals("1") ? true : false);
 					member.setRole(request.getMember().getRole());
 					member = memberGroupRepository.save(member);
 					return 0;
