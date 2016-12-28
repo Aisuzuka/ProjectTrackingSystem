@@ -13,7 +13,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(securedEnabled = true)
+@EnableGlobalMethodSecurity(securedEnabled = false)
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter{	
 	@Autowired
 	DataSource dataSource;
