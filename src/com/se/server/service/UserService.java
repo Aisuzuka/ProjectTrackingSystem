@@ -79,6 +79,7 @@ public class UserService {
 		UserSessionResponse response = new UserSessionResponse();
 		response.setState(0);
 		response.setUserId(user.getId());
+		response.setUserRole(user.getRole());
 		return response;
 
 	}
