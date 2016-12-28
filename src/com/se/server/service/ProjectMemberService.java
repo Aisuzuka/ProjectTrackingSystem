@@ -18,6 +18,8 @@ import com.se.api.request.MemberCreateRequest;
 import com.se.api.request.MemberDetailRequest;
 import com.se.api.response.MemberItemResponse;
 import com.se.api.response.MemberListResponse;
+import com.se.server.entity.Issue;
+import com.se.server.entity.IssueGroup;
 import com.se.server.entity.MemberGroup;
 import com.se.server.entity.Project;
 import com.se.server.entity.User;
@@ -79,7 +81,7 @@ public class ProjectMemberService {
 			model.setUserId(member.getUser().getId());
 
 			response.setMember(model);
-			response.setState(0);
+			response.setState(ErrorCode.Correct);
 		} else {
 			response.setState(ErrorCode.NotProjectManager);
 		}
@@ -106,7 +108,7 @@ public class ProjectMemberService {
 				listModel.add(model);
 			}
 			response.setMember(listModel);
-			response.setState(0);
+			response.setState(ErrorCode.Correct);
 		} else {
 			response.setState(ErrorCode.NotMember);
 		}
@@ -125,14 +127,22 @@ public class ProjectMemberService {
 		else if (isRelationalUser(user, project)) {
 			Set<MemberGroup> list = project.getMemberGroup();
 			for (MemberGroup member : list) {
-				if (request.getMember().getUserId() == member.getUser().getId()) {
-					member.setJoined(request.getMember().getIsJoined().equals("1") ? true : false);
-					member.setRole(request.getMember().getRole());
-					member = memberGroupRepository.save(member);
-					return 0;
+				if (user.getId() == member.getUser().getId()) {
+					if (isParty(user, member)) {
+						if (isAgree(request)) {
+							member.setJoined(true);
+							member = memberGroupRepository.save(member);
+						} else {
+							return deleteMember(userId, projectId, userId);
+						}
+					} else {
+						member.setRole(request.getMember().getRole());
+						member = memberGroupRepository.save(member);
+						return ErrorCode.Correct;
+					}
 				}
 			}
-			return 0;
+			return ErrorCode.Correct;
 		} else {
 			return ErrorCode.NotMember;
 		}
@@ -171,6 +181,8 @@ public class ProjectMemberService {
 			member.setProject(null);
 			member.setUser(null);
 
+			replaceIssueRelation(project, delUser);
+
 			project.setMemberGroup(listP);
 			project = projectRepository.save(project);
 
@@ -178,7 +190,7 @@ public class ProjectMemberService {
 			delUser = userRepository.save(delUser);
 
 			memberGroupRepository.delete(member);
-			return 0;
+			return ErrorCode.Correct;
 		} else {
 			return ErrorCode.NotProjectManager;
 		}
@@ -192,10 +204,33 @@ public class ProjectMemberService {
 	//
 	// }
 
-	private Set<MemberGroup> removeRelation(MemberGroup member, Set<MemberGroup> list) {
-		list.remove(member);
-		return list;
+	private boolean isParty(User user, MemberGroup member) {
+		return user.getId() == member.getUser().getId();
 	}
+
+	private boolean isAgree(MemberDetailRequest request) {
+		return request.getMember().getIsJoined().equals("1");
+	}
+	
+	private  void replaceIssueRelation(Project project, User user) {
+		// Issue's user relation will be replaced to project manager.
+		Set<Issue> list = user.getResponsibleIssue();
+		for (Issue item : list) {
+			if (item.getReporterId().getId() == user.getId()) {
+				item.setReporterId(project.getManager());
+			}
+			if (item.getPersonInChargeId().getId() == user.getId()) {
+				item.setPersonInChargeId(project.getManager());
+			}
+			item = issueRepository.save(item);
+		}
+	}
+
+	// private Set<MemberGroup> removeRelation(MemberGroup member,
+	// Set<MemberGroup> list) {
+	// list.remove(member);
+	// return list;
+	// }
 
 	private boolean isRelationalUser(User user, Project project) {
 		Set<MemberGroup> list = project.getMemberGroup();
