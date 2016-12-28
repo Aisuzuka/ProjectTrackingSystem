@@ -134,9 +134,8 @@ public class ProjectMemberService {
 			}
 			return 0;
 		} else {
-			return -1;
+			return ErrorCode.NotMember;
 		}
-		return ErrorCode.NotMember;
 	}
 
 	// @RequestMapping(value = "/members/{userId}/{projectId}/{memberId}",
