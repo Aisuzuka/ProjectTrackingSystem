@@ -85,7 +85,6 @@ public class IssueService {
 	@RequestMapping(value = "/issues/{userId}/{issueId}", method = RequestMethod.GET)
 	public IssueItemResponse getIssueInfo(@PathVariable int userId, @PathVariable int issueId) {
 		IssueItemResponse response = new IssueItemResponse();
-		IssueData model = new IssueData();
 		Issue issue = issueRepository.findOne(issueId);
 		User user = userRepository.findOne(userId);
 		if (isNull(user))
@@ -93,7 +92,7 @@ public class IssueService {
 		else if (isNull(issue))
 			response.setState(ErrorCode.IssueNull);
 		else if (user.getId() == issue.getIssueGroup().getProject().getManager().getId()) {
-			model = generateIssueModel(issue);
+			IssueData model = generateIssueModel(issue);
 			response.setIssue(model);
 			response.setState(0);
 		} else {
@@ -236,6 +235,8 @@ public class IssueService {
 	private IssueData generateIssueModel(Issue issue) {
 		IssueData model = new IssueData();
 		model.setIssueId(issue.getId());
+		model.setIssueGroupId(issue.getIssueGroup().getId());
+		model.setProjectId(issue.getIssueGroup().getProject().getId());
 		model.setDescription(issue.getDescription());
 		model.setFinishTime(issue.getFinishTime());
 		model.setPersonInChargeId(issue.getPersonInChargeId().getId());

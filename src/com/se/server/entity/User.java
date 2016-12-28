@@ -39,7 +39,7 @@ public class User {
 	private String role;
 	
 	//ok
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY,mappedBy="user", orphanRemoval=true)
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY,mappedBy="user", orphanRemoval=false)
 	private Set<MemberGroup> joinMemberGroups=new HashSet<MemberGroup>();
 	
 	//ok
@@ -47,11 +47,11 @@ public class User {
 	private Set<Project> responsibleProject=new HashSet<Project>();
 	
 	//ok
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="reporterId", orphanRemoval=true)
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="reporterId", orphanRemoval=false)
 	private Set<Issue> responsibleIssue=new HashSet<Issue>();
 	
 	//ok
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="personInChargeId", orphanRemoval=true)
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="personInChargeId", orphanRemoval=false)
 	private Set<Issue> handleIssue= new HashSet<Issue>();
  	
 	

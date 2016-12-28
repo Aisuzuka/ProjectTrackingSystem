@@ -46,17 +46,6 @@ public class UserService {
 	@Autowired
 	MemberGroupRepository memberGroupRepository;
 
-	@RequestMapping(value = "/register", method = RequestMethod.POST)
-	public int register(int id) {
-		User user = new User();
-		user.setEmailAddress("test");
-		user.setName("user");
-		user.setPassword("password");
-		user.setRole("role");
-		userRepository.save(user);
-		return 0;
-	}
-
 	@RequestMapping(value = "/users", method = RequestMethod.POST)
 	public UserSessionResponse createUser(@RequestBody UserCreateRequest request) {
 		User user = new User();
@@ -79,6 +68,7 @@ public class UserService {
 		UserSessionResponse response = new UserSessionResponse();
 		response.setState(0);
 		response.setUserId(user.getId());
+		response.setUserRole(user.getRole());
 		return response;
 
 	}
@@ -113,7 +103,7 @@ public class UserService {
 		}
 		if (!user.getRole().equals("SystemManager")) {
 			UserListResponse response = new UserListResponse();
-			response.setState(-1);
+			response.setState(-2);
 			response.setList(null);
 			return response;
 		}
@@ -137,15 +127,26 @@ public class UserService {
 		return response;
 	}
 
-	@RequestMapping(value = "/users/{userId}", method = RequestMethod.PUT)
+	@RequestMapping(value = "/users/put/{userId}", method = RequestMethod.POST)
 	public int updateUserInfo(@PathVariable int userId, @RequestBody UserDetailRequest request) {
 		User user = userRepository.findOne(userId);
 		if (user == null) {
 			return -1;
 		}
-		user.setName(request.getName());
+		
+		if(request.getName()!= null && !request.getName().equals("")){
+			if(userRepository.findByName(request.getName())!=null)return -2;
+			user.setName(request.getName());
+		}
+		
+		
+		if(request.getPassword()!= null && !request.getPassword().equals(""))
 		user.setPassword(request.getPassword());
+		
+		if(request.getEmailAddress()!= null && !request.getEmailAddress().equals(""))
 		user.setEmailAddress(request.getEmailAddress());
+		
+		if(request.getUserRole() != null && !request.getUserRole().equals(""))
 		user.setRole(request.getUserRole());
 		userRepository.save(user);
 
@@ -153,7 +154,7 @@ public class UserService {
 
 	}
 
-	@RequestMapping(value = "/users/{userId}/{delUserId}", method = RequestMethod.DELETE)
+	@RequestMapping(value = "/users/delete/{userId}/{delUserId}", method = RequestMethod.GET)
 	public int deleteUserInfo(@PathVariable int userId, @PathVariable int delUserId) {
 		User user = userRepository.findOne(userId);
 		if (user == null) {
@@ -223,7 +224,7 @@ public class UserService {
 			return userSessionResponse;
 		} else {
 			UserSessionResponse userSessionResponse = new UserSessionResponse();
-			userSessionResponse.setState(-1);
+			userSessionResponse.setState(-2);
 			return userSessionResponse;
 		}
 
