@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.se.api.data.ErrorCode;
 import com.se.api.data.MemberData;
 import com.se.api.request.MemberCreateRequest;
 import com.se.api.request.MemberDetailRequest;
@@ -49,12 +50,12 @@ public class ProjectMemberService {
 		User host = userRepository.findOne(userId);
 		Project project = projectRepository.findOne(projectId);
 		if (isNull(customer))
-			response.setState(-1);
+			response.setState(ErrorCode.CustomerNull);
 		else if (isNull(host))
-			response.setState(-1);
+			response.setState(ErrorCode.UserNull);
 		else if (isNull(project))
-			response.setState(-1);
-		else if (host.getId() == project.getManager().getId()) {
+			response.setState(ErrorCode.ProjectNull);
+		else if (isProjectManager(host, project)) {
 			MemberGroup member = new MemberGroup();
 			member.setUser(customer);
 			member.setJoined(false);
@@ -80,7 +81,7 @@ public class ProjectMemberService {
 			response.setMember(model);
 			response.setState(0);
 		} else {
-			response.setState(-1);
+			response.setState(ErrorCode.NotProjectManager);
 		}
 		return response;
 	}
@@ -91,9 +92,9 @@ public class ProjectMemberService {
 		User user = userRepository.findOne(userId);
 		Project project = projectRepository.findOne(projectId);
 		if (isNull(user))
-			response.setState(-1);
+			response.setState(ErrorCode.UserNull);
 		else if (isNull(project))
-			response.setState(-1);
+			response.setState(ErrorCode.ProjectNull);
 		else if (isRelationalUser(user, project)) {
 			List<MemberData> listModel = new ArrayList<MemberData>();
 			Set<MemberGroup> list = project.getMemberGroup();
@@ -107,7 +108,7 @@ public class ProjectMemberService {
 			response.setMember(listModel);
 			response.setState(0);
 		} else {
-			response.setState(-1);
+			response.setState(ErrorCode.NotMember);
 		}
 		return response;
 	}
@@ -118,9 +119,9 @@ public class ProjectMemberService {
 		User user = userRepository.findOne(userId);
 		Project project = projectRepository.findOne(projectId);
 		if (isNull(user))
-			return -1;
+			return ErrorCode.UserNull;
 		else if (isNull(project))
-			return -1;
+			return ErrorCode.ProjectNull;
 		else if (isRelationalUser(user, project)) {
 			Set<MemberGroup> list = project.getMemberGroup();
 			for (MemberGroup member : list) {
@@ -132,7 +133,7 @@ public class ProjectMemberService {
 				}
 			}
 		}
-		return -1;
+		return ErrorCode.NotMember;
 	}
 
 	// @RequestMapping(value = "/members/{userId}/{projectId}/{memberId}",
@@ -149,11 +150,11 @@ public class ProjectMemberService {
 		Project project = projectRepository.findOne(projectId);
 		User delUser = userRepository.findOne(delUserId);
 		if (isNull(user))
-			return -1;
+			return ErrorCode.UserNull;
 		else if (isNull(project))
-			return -1;
+			return ErrorCode.ProjectNull;
 		else if (isNull(delUser))
-			return -1;
+			return ErrorCode.CustomerNull;
 		else if (isProjectManager(user, project)) {
 			Set<MemberGroup> listP = project.getMemberGroup();
 			Set<MemberGroup> listU = delUser.getJoinMemberGroups();
@@ -177,7 +178,7 @@ public class ProjectMemberService {
 			memberGroupRepository.delete(member);
 			return 0;
 		} else {
-			return -1;
+			return ErrorCode.NotProjectManager;
 		}
 	}
 
