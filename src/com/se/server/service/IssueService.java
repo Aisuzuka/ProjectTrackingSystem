@@ -147,7 +147,7 @@ public class IssueService {
 	//
 	// }
 
-	@RequestMapping(value = "/issues/{userId}/{issueId}", method = RequestMethod.PUT)
+	@RequestMapping(value = "/issues/put/{userId}/{issueId}", method = RequestMethod.POST)
 	public IssueResponse updateIssue(@PathVariable int userId, @PathVariable int issueId,
 			@RequestBody IssueRequest request) {
 		Issue issue = issueRepository.findOne(issueId);
