@@ -8,4 +8,5 @@ import lombok.Setter;
 public class UserSessionResponse {
 	private int state;
 	private int userId;
+	private String userRole;
 }

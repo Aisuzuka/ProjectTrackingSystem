@@ -32,7 +32,7 @@ public class IssueGroup {
 	@ManyToOne(cascade=CascadeType.ALL, optional=false)
 	private Project project;
 	
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="issueGroup", orphanRemoval=true)
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="issueGroup", orphanRemoval=false)
 	private Set<Issue> issues = new HashSet<Issue>();
 	
 //	//ok

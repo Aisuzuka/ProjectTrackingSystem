@@ -38,7 +38,7 @@ public class Project {
 	
 	//ok
 	@JoinColumn(name = "_MANAGER")
-	@ManyToOne(cascade=CascadeType.ALL, optional=false)
+	@ManyToOne(cascade=CascadeType.ALL, optional=true)
 	private User manager;
 	
 	

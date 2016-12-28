@@ -155,6 +155,7 @@ public class ProjectService {
 			//System.out.println("gggggggggg");
 			if(memberGroup.isJoined()){
 				ProjectData projectData=new ProjectData();
+				projectData.setProjectId(memberGroup.getProject().getId());
 				projectData.setDescription(memberGroup.getProject().getDescription());
 				projectData.setProjectName(memberGroup.getProject().getName());	
 				projectData.setManager(memberGroup.getProject().getManager().getName());
@@ -219,7 +220,7 @@ public class ProjectService {
 		}
 		if(!user.getRole().equals("SystemManager")){
 			ProjectListResponse response =new ProjectListResponse();
-			response.setState(-1);
+			response.setState(-2);
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
@@ -241,7 +242,7 @@ public class ProjectService {
 		
 	}
 	
-	@RequestMapping(value = "/projects/{userId}/{projectId}", method = RequestMethod.PUT)
+	@RequestMapping(value = "/projects/put/{userId}/{projectId}", method = RequestMethod.POST)
 	public int updateProjectInfo(@PathVariable int userId,@PathVariable int projectId,@RequestBody ProjectRequest request){
 		Project project = projectRepository.findOne(projectId);
 		if(project == null){
@@ -266,32 +267,28 @@ public class ProjectService {
 		return 0;
 	}
 	
-	@RequestMapping(value = "/projects/{userId}/{projectId}", method = RequestMethod.DELETE)
+	@RequestMapping(value = "/projects/delete/{userId}/{projectId}", method = RequestMethod.GET)
 	public int deleteProject(@PathVariable int userId,@PathVariable int projectId){
 		Project project = projectRepository.findOne(projectId);
+		//Step1:check projectId is valid
 		if(project == null){
 			return -1;
 		}
-		Set<MemberGroup> memberGroupSet= project.getMemberGroup();
-		boolean findUser =false;
-		for(MemberGroup memberGroup:memberGroupSet){
-			if(memberGroup.getUser().getId()==userId){
-				findUser =true;
-				break;
-			}
-		}
-		if(!findUser){
-			return -1;
+		
+		//Step2:check user is projectManager
+		if(project.getManager().getId() != userId){
+			return -2;
 		}
 		
-		memberGroupSet=project.getMemberGroup();
+		//Step3:delete relation ship
+		Set<MemberGroup> memberGroupSet= project.getMemberGroup();
 		for(MemberGroup memberGroup:memberGroupSet){
 			memberGroup.getUser().getJoinMemberGroups().remove(memberGroup);
 			memberGroup.setUser(null);
 		}
 		
 		User manager =project.getManager();
-		manager.getResponsibleProject().remove(manager);
+		manager.getResponsibleProject().remove(project);
 		project.setManager(null);
 		
 		
@@ -299,17 +296,13 @@ public class ProjectService {
 		for(IssueGroup issueGroup:issueGroupSet){
 			Set<Issue> issueSet = issueGroup.getIssues();
 			for(Issue issue : issueSet){
-				issue.setIssueGroup(null);
 				issue.getPersonInChargeId().getHandleIssue().remove(issue);
+				issue.setPersonInChargeId(null);
 				issue.getReporterId().getResponsibleIssue().remove(issue);
+				issue.setReporterId(null);
 			}
-			issueGroup.setIssues(null);
 		}
-		project.setIssueGroup(null);
-		
-		projectRepository.delete(project.getId());
-		
-		
+		projectRepository.delete(projectId);
 		
 		return 0;
 	}
