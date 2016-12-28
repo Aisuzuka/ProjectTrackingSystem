@@ -148,10 +148,9 @@ public class ProjectService {
 		ProjectListResponse response = new ProjectListResponse();
 		response.setState(0);
 		response.setList(new ArrayList<ProjectData>());
-		for (MemberGroup memberGroup : memberGroupSet) {
-			// System.out.println("gggggggggg");
-			if (memberGroup.isJoined()) {
-				ProjectData projectData = new ProjectData();
+		for(MemberGroup memberGroup:memberGroupSet){
+			if(memberGroup.isJoined()){
+				ProjectData projectData=new ProjectData();
 				projectData.setProjectId(memberGroup.getProject().getId());
 				projectData.setDescription(memberGroup.getProject().getDescription());
 				projectData.setProjectName(memberGroup.getProject().getName());
@@ -210,9 +209,11 @@ public class ProjectService {
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
-		if (!user.getRole().equals("SystemManager")) {
-			ProjectListResponse response = new ProjectListResponse();
-			response.setState(-1);
+
+		if(!user.getRole().equals("SystemManager")){
+			ProjectListResponse response =new ProjectListResponse();
+			response.setState(-2);
+
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
@@ -233,10 +234,10 @@ public class ProjectService {
 		return response;
 
 	}
+	
+	@RequestMapping(value = "/projects/put/{userId}/{projectId}", method = RequestMethod.POST)
+	public int updateProjectInfo(@PathVariable int userId,@PathVariable int projectId,@RequestBody ProjectRequest request){
 
-	@RequestMapping(value = "/projects/{userId}/{projectId}", method = RequestMethod.PUT)
-	public int updateProjectInfo(@PathVariable int userId, @PathVariable int projectId,
-			@RequestBody ProjectRequest request) {
 		Project project = projectRepository.findOne(projectId);
 		if (project == null) {
 			return -1;
@@ -259,48 +260,45 @@ public class ProjectService {
 		projectRepository.save(project);
 		return 0;
 	}
-
-	@RequestMapping(value = "/projects/{userId}/{projectId}", method = RequestMethod.DELETE)
-	public int deleteProject(@PathVariable int userId, @PathVariable int projectId) {
+	
+	@RequestMapping(value = "/projects/delete/{userId}/{projectId}", method = RequestMethod.GET)
+	public int deleteProject(@PathVariable int userId,@PathVariable int projectId){
 		Project project = projectRepository.findOne(projectId);
-		if (project == null) {
+		//Step1:check projectId is valid
+		if(project == null){
 			return -1;
 		}
-		Set<MemberGroup> memberGroupSet = project.getMemberGroup();
-		boolean findUser = false;
-		for (MemberGroup memberGroup : memberGroupSet) {
-			if (memberGroup.getUser().getId() == userId) {
-				findUser = true;
-				break;
-			}
+		
+		//Step2:check user is projectManager
+		if(project.getManager().getId() != userId){
+			return -2;
 		}
-		if (!findUser) {
-			return -1;
-		}
-
-		memberGroupSet = project.getMemberGroup();
-		for (MemberGroup memberGroup : memberGroupSet) {
+		
+		//Step3:delete relation ship
+		Set<MemberGroup> memberGroupSet= project.getMemberGroup();
+		for(MemberGroup memberGroup:memberGroupSet){
 			memberGroup.getUser().getJoinMemberGroups().remove(memberGroup);
 			memberGroup.setUser(null);
 		}
+		
+		User manager =project.getManager();
+		manager.getResponsibleProject().remove(project);
 
-		User manager = project.getManager();
-		manager.getResponsibleProject().remove(manager);
 		project.setManager(null);
 
 		Set<IssueGroup> issueGroupSet = project.getIssueGroup();
 		for (IssueGroup issueGroup : issueGroupSet) {
 			Set<Issue> issueSet = issueGroup.getIssues();
-			for (Issue issue : issueSet) {
-				issue.setIssueGroup(null);
-				issue.getPersonInChargeId().getHandleIssue().remove(issue);
-				issue.getReporterId().getResponsibleIssue().remove(issue);
-			}
-			issueGroup.setIssues(null);
-		}
-		project.setIssueGroup(null);
+			for(Issue issue : issueSet){
 
-		projectRepository.delete(project.getId());
+				issue.getPersonInChargeId().getHandleIssue().remove(issue);
+				issue.setPersonInChargeId(null);
+				issue.getReporterId().getResponsibleIssue().remove(issue);
+				issue.setReporterId(null);
+			}
+		}
+
+		projectRepository.delete(projectId);
 
 		return 0;
 	}

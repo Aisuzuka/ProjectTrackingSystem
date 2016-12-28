@@ -25,12 +25,12 @@ public class MemberGroup {
 	
 	//ok
 	@JoinColumn(name = "USERSID")
-	@ManyToOne(cascade=CascadeType.ALL,  optional=false)
+	@ManyToOne(cascade=CascadeType.ALL,  optional=true)
 	private User user;
 	
 	//ok
 	@JoinColumn(name = "PROJECTID")
-	@ManyToOne(cascade=CascadeType.ALL, optional=false)
+	@ManyToOne(cascade=CascadeType.ALL, optional=true)
 	private Project project;
 	
 	@Column(name = "ROLE")
