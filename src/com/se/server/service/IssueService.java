@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.se.api.data.ErrorCode;
 import com.se.api.data.IssueData;
 import com.se.api.request.IssueRequest;
+import com.se.api.request.IssueResponse;
 import com.se.api.response.IssueItemResponse;
 import com.se.api.response.IssueListResponse;
 import com.se.server.entity.Issue;
@@ -75,7 +76,7 @@ public class IssueService {
 			project = addIssueGroup2Project(issueGroup, project);
 
 			IssueData model = generateIssueModel(issue);
-			response.setState(0);
+			response.setState(ErrorCode.Correct);
 			response.setIssue(model);
 		}
 		return response;
@@ -94,7 +95,7 @@ public class IssueService {
 		else if (user.getId() == issue.getIssueGroup().getProject().getManager().getId()) {
 			IssueData model = generateIssueModel(issue);
 			response.setIssue(model);
-			response.setState(0);
+			response.setState(ErrorCode.Correct);
 		} else {
 			response.setState(ErrorCode.NotProjectManager);
 		}
@@ -112,7 +113,7 @@ public class IssueService {
 			list.addAll(user.getHandleIssue());
 			List<IssueData> listModel = generateIssueList(list);
 			response.setList(listModel);
-			response.setState(0);
+			response.setState(ErrorCode.Correct);
 		}
 		return response;
 	}
@@ -134,7 +135,7 @@ public class IssueService {
 			}
 			List<IssueData> listModel = generateIssueList(list);
 			response.setList(listModel);
-			response.setState(0);
+			response.setState(ErrorCode.Correct);
 		} else {
 			response.setState(ErrorCode.NotProjectManager);
 		}
@@ -147,20 +148,22 @@ public class IssueService {
 	// }
 
 	@RequestMapping(value = "/issues/{userId}/{issueId}", method = RequestMethod.PUT)
-	public int updateIssue(@PathVariable int userId, @PathVariable int issueId, @RequestBody IssueRequest request) {
+	public IssueResponse updateIssue(@PathVariable int userId, @PathVariable int issueId,
+			@RequestBody IssueRequest request) {
 		Issue issue = issueRepository.findOne(issueId);
 		User user = userRepository.findOne(userId);
+		IssueResponse response = new IssueResponse();
 		if (isNull(issue))
-			return ErrorCode.IssueNull;
+			response.setState(ErrorCode.IssueNull);
 		else if (isNull(user))
-			return ErrorCode.UserNull;
+			response.setState(ErrorCode.UserNull);
 		else if (isPersonInCharge(user, issue)) {
 			IssueGroup issueGroup = issueGroupRepository.findOne(issue.getIssueGroup().getId());
 			Project project = projectRepository.findOne(issueGroup.getProject().getId());
 			Issue newIssue = new Issue();
 			User personInCharge = userRepository.findOne(request.getPersonInChargeId());
 			if (isNull(personInCharge)) {
-				return ErrorCode.PersonInChargeNull;
+				response.setState(ErrorCode.PersonInChargeNull);
 			}
 
 			issue.setFinishTime(new Date());
@@ -181,11 +184,12 @@ public class IssueService {
 			issueGroup = addIssue2IssueGroup(newIssue, issueGroup);
 			project = addIssueGroup2Project(issueGroup, project);
 
-			return 0;
+			response.setState(ErrorCode.Correct);
+			response.setIssueId(newIssue.getId());
 		} else if (isReporter(user, issue) || isProjectManager(user, issue)) {
 			User projectManager = userRepository.findOne(request.getPersonInChargeId());
 			if (isNull(projectManager))
-				return ErrorCode.PersonInChargeNull;
+				response.setState(ErrorCode.PersonInChargeNull);
 
 			issue.setDescription(request.getDescription());
 			issue.setPriority(request.getPriovify());
@@ -194,10 +198,13 @@ public class IssueService {
 			issue.setTitle(request.getTitle());
 			issue.setPersonInChargeId(projectManager);
 			issue = issueRepository.save(issue);
-			return 0;
+			response.setState(ErrorCode.Correct);
+			response.setIssueId(issue.getId());
 		} else {
-			return ErrorCode.NotMember;
+			response.setState(ErrorCode.NotMember);
 		}
+
+		return response;
 	}
 
 	private boolean isProjectManager(User user, Issue issue) {
