@@ -73,7 +73,7 @@ public class ProjectMemberService {
 			customer = userRepository.save(customer);
 
 			MemberData model = new MemberData();
-			model.setJoined(member.isJoined());
+			model.setIsJoined(member.isJoined() ? "1" : "0");
 			model.setRole(member.getRole());
 			model.setUserId(member.getUser().getId());
 
@@ -99,7 +99,7 @@ public class ProjectMemberService {
 			Set<MemberGroup> list = project.getMemberGroup();
 			for (MemberGroup member : list) {
 				MemberData model = new MemberData();
-				model.setJoined(member.isJoined());
+				model.setIsJoined(member.isJoined() ? "1" : "0");
 				model.setRole(member.getRole());
 				model.setUserId(member.getUser().getId());
 				listModel.add(model);
@@ -112,7 +112,7 @@ public class ProjectMemberService {
 		return response;
 	}
 
-	@RequestMapping(value = "/members/{userId}/{projectId}", method = RequestMethod.PUT)
+	@RequestMapping(value = "/members/put/{userId}/{projectId}", method = RequestMethod.POST)
 	public int updateInfo(@PathVariable int userId, @PathVariable int projectId,
 			@RequestBody MemberDetailRequest request) {
 		User user = userRepository.findOne(userId);
@@ -125,8 +125,7 @@ public class ProjectMemberService {
 			Set<MemberGroup> list = project.getMemberGroup();
 			for (MemberGroup member : list) {
 				if (request.getMember().getUserId() == member.getUser().getId()) {
-					member.setJoined(request.getMember().getJoined());
-					//member.setJoined(true);
+					member.setJoined(request.getMember().getIsJoined().equals("1") ? true : false);
 					member.setRole(request.getMember().getRole());
 					member = memberGroupRepository.save(member);
 					return 0;
@@ -146,7 +145,7 @@ public class ProjectMemberService {
 	//
 	// }
 
-	@RequestMapping(value = "/members/{userId}/{projectId}/{delUserId}", method = RequestMethod.DELETE)
+	@RequestMapping(value = "/members/delete/{userId}/{projectId}/{delUserId}", method = RequestMethod.POST)
 	public int deleteMember(@PathVariable int userId, @PathVariable int projectId, @PathVariable int delUserId) {
 		User user = userRepository.findOne(userId);
 		Project project = projectRepository.findOne(projectId);
@@ -161,15 +160,15 @@ public class ProjectMemberService {
 			Set<MemberGroup> listP = project.getMemberGroup();
 			Set<MemberGroup> listU = delUser.getJoinMemberGroups();
 			MemberGroup member = new MemberGroup();
-			for (MemberGroup item : listU) {
+			for (MemberGroup item : listP) {
 				if (delUser.getId() == item.getUser().getId()) {
 					member = item;
-					member.setUser(null);
-					member.setProject(null);
 				}
 			}
-			listP = removeRelation(delUser, listP);
-			listU = removeRelation(delUser, listU);
+			delUser.getJoinMemberGroups().remove(member);
+			project.getMemberGroup().remove(member);
+			member.setProject(null);
+			member.setUser(null);
 
 			project.setMemberGroup(listP);
 			project = projectRepository.save(project);
@@ -192,14 +191,8 @@ public class ProjectMemberService {
 	//
 	// }
 
-	private Set<MemberGroup> removeRelation(User delUser, Set<MemberGroup> list) {
-		for (MemberGroup item : list) {
-			if (delUser.getId() == item.getUser().getId()) {
-				list.remove(item);
-				item.setProject(null);
-				item.setUser(null);
-			}
-		}
+	private Set<MemberGroup> removeRelation(MemberGroup member, Set<MemberGroup> list) {
+		list.remove(member);
 		return list;
 	}
 
