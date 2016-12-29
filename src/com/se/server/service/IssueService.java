@@ -146,10 +146,24 @@ public class IssueService {
 		return response;
 	}
 
-	// @RequestMapping(value = "/issues/{userId}", method = RequestMethod.GET)
-	// public void getAllIssueList(@PathVariable int userId) {
-	//
-	// }
+	 @RequestMapping(value = "/issues/{userId}", method = RequestMethod.GET)
+	 public IssueListResponse getAllIssueList(@PathVariable int userId) {
+			IssueListResponse response = new IssueListResponse();
+			User user = userRepository.findOne(userId);
+			if(!isSystemManager(user))
+				response.setState(ErrorCode.NotSystemManager);
+			else {
+				Iterable<Issue> listGroup = issueRepository.findAll();
+				Set<Issue> list = new HashSet<>();
+				for (Issue item : listGroup) {
+					list.add(item);
+				}
+				List<IssueData> listModel = generateIssueList(list);
+				response.setList(listModel);
+				response.setState(ErrorCode.Correct);
+			}
+			return response;
+	 }
 
 	@RequestMapping(value = "/issues/put/{userId}/{issueId}", method = RequestMethod.POST)
 	public IssueResponse updateIssue(@PathVariable int userId, @PathVariable int issueId,
@@ -295,5 +309,9 @@ public class IssueService {
 
 	private boolean isNull(Object object) {
 		return object == null;
+	}
+	
+	private boolean isSystemManager(User user) {
+		return user.getRole().equals("SystemManager");
 	}
 }
