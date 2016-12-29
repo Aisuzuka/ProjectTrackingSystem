@@ -15,11 +15,9 @@ public class ErrorCode {
 	public static int UserIsNotInProject = 10;	//User isn't invited or joined in project
 	public static int PMCantRemove = 11;			//PM can't remove self member relational
 	public static int SMCantInvited = 12;
-	
-	
-	public static int UserNameRepeat =9 ;
-	public static int EmailFormatNotValid =10;
-	public static int UserNameNotExist =11;
-	public static int PasswordNotVaild =12;
-	public static int NotGeneralUser =13;
+	public static int UserNameRepeat = 13;
+	public static int EmailFormatNotValid = 14;
+	public static int UserNameNotExist = 15;
+	public static int PasswordNotVaild = 16;
+	public static int NotGeneralUser = 17;
 }
