@@ -76,7 +76,7 @@ public class TerminalToHtml {
 				stringBuffer.append("</b>");
 			}
 			if(content.br){
-			stringBuffer.append("</br>");
+			stringBuffer.append("<br>");
 			}
 		}
 		stringBuffer.append("</html>");
