@@ -55,16 +55,16 @@ public class UserService {
 		// check user name is repeat
 		if (exitUser != null) {
 			UserSessionResponse response = new UserSessionResponse();
-			response.setState(-1);
+			response.setState(-6);
 			return response;
 		}
 
 		user.setName(request.getName());
 		user.setPassword(request.getPassword());
 		String[] spplited = request.getEmailAddress().split("@");
-		if(spplited.length!=3||!spplited[1].equals("@")){
+		if(spplited.length!=2){
 			UserSessionResponse response = new UserSessionResponse();
-			response.setState(-1);
+			response.setState(-3);
 			return response;
 		}
 		
