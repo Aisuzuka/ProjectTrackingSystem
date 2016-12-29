@@ -1,5 +1,6 @@
 package com.se.server.service;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -19,7 +20,6 @@ import com.se.api.request.MemberDetailRequest;
 import com.se.api.response.MemberItemResponse;
 import com.se.api.response.MemberListResponse;
 import com.se.server.entity.Issue;
-import com.se.server.entity.IssueGroup;
 import com.se.server.entity.MemberGroup;
 import com.se.server.entity.Project;
 import com.se.server.entity.User;
@@ -28,6 +28,7 @@ import com.se.server.repository.IssueRepository;
 import com.se.server.repository.MemberGroupRepository;
 import com.se.server.repository.ProjectRepository;
 import com.se.server.repository.UserRepository;
+import com.se.tool.TerminalToHtml;
 
 @RestController
 @RequestMapping(value = "/api")
@@ -43,6 +44,8 @@ public class ProjectMemberService {
 	IssueRepository issueRepository;
 	@Autowired
 	MemberGroupRepository memberGroupRepository;
+	@Autowired
+	EmailService emailService;
 
 	@RequestMapping(value = "/members/{userId}/{projectId}", method = RequestMethod.POST)
 	public MemberItemResponse createMember(@PathVariable int userId, @PathVariable int projectId,
@@ -57,6 +60,10 @@ public class ProjectMemberService {
 			response.setState(ErrorCode.UserNull);
 		else if (isNull(project))
 			response.setState(ErrorCode.ProjectNull);
+		else if (isRelationalUser(customer, project))
+				response.setState(ErrorCode.UserIsInProject);
+		else if (isSystemManager(customer))
+				response.setState(ErrorCode.SMCantInvited);
 		else if (isProjectManager(host, project)) {
 			MemberGroup member = new MemberGroup();
 			member.setUser(customer);
@@ -80,6 +87,20 @@ public class ProjectMemberService {
 			model.setRole(member.getRole());
 			model.setUserId(member.getUser().getId());
 
+			SimpleDateFormat sdFormat = new SimpleDateFormat("yyyy-MM-dd a hh:mm");
+			String message = new TerminalToHtml()
+					.append(customer.getName()).append("你好：").enter()
+					.append("專案管理員").append(host.getName()).setBold(true).setColor(0, 0, 255).append("邀請你加入專案").append(project.getName()).setBold(true).setColor(0, 0, 255).enter()
+					.append("以下為專案內容").enter()
+					.enter()
+					.append("標題：").append(project.getName()).enter()
+					.append("描述：").append(project.getDescription()).enter()
+					.append("管理員：").append(host.getName()).enter()
+					.append("創立時間：").append(sdFormat.format(project.getTimeStamp())).enter()
+					.enter()
+					.append("請記得登入系統回覆邀請").setBold(true).enter()
+					.append("祝你有美好的一天").toHtml();
+			emailService.generateAndSendEmail(customer.getEmailAddress(), host.getName() + "邀請你加入專案" + project.getName(), message);
 			response.setMember(model);
 			response.setState(ErrorCode.Correct);
 		} else {
@@ -129,6 +150,13 @@ public class ProjectMemberService {
 			for (MemberGroup member : list) {
 				if (user.getId() == member.getUser().getId()) {
 					if (isParty(user, member)) {
+						User projectManager = project.getManager();
+						String message = new TerminalToHtml()
+								.append(projectManager.getName()).append("你好：").enter()
+								.append("你邀請的成員").append(user.getName()).setBold(true).setColor(0, 0, 255).append((isAgree(request)? "同意": "拒絕") + "加入專案").append(project.getName()).setBold(true).setColor(0, 0, 255).enter()
+								.enter()
+								.append("祝你有美好的一天").toHtml();
+						emailService.generateAndSendEmail(projectManager.getEmailAddress(), user.getName() + "已回覆你的專案邀請" + project.getName(), message);
 						if (isAgree(request)) {
 							member.setJoined(true);
 							member = memberGroupRepository.save(member);
@@ -167,30 +195,42 @@ public class ProjectMemberService {
 			return ErrorCode.ProjectNull;
 		else if (isNull(delUser))
 			return ErrorCode.CustomerNull;
+		else if (isProjectManager(delUser, project))
+			return ErrorCode.PMCantRemove;
 		else if (isProjectManager(user, project)) {
 			Set<MemberGroup> listP = project.getMemberGroup();
 			Set<MemberGroup> listU = delUser.getJoinMemberGroups();
-			MemberGroup member = new MemberGroup();
+			MemberGroup member = null;
 			for (MemberGroup item : listP) {
 				if (delUser.getId() == item.getUser().getId()) {
 					member = item;
 				}
 			}
-			delUser.getJoinMemberGroups().remove(member);
-			project.getMemberGroup().remove(member);
-			member.setProject(null);
-			member.setUser(null);
-
-			replaceIssueRelation(project, delUser);
-
-			project.setMemberGroup(listP);
-			project = projectRepository.save(project);
-
-			delUser.setJoinMemberGroups(listU);
-			delUser = userRepository.save(delUser);
-
-			memberGroupRepository.delete(member);
-			return ErrorCode.Correct;
+			if(isNull(member))
+				return ErrorCode.UserIsNotInProject;
+			else{
+				String message = new TerminalToHtml()
+						.append(delUser.getName()).append("你好：").enter()
+						.append("專案").append(project.getName()).setBold(true).setColor(0, 0, 255).append("的專案管理員已解除你的職務").enter()
+						.enter()
+						.append("祝你有美好的一天").toHtml();
+				emailService.generateAndSendEmail(delUser.getEmailAddress(), "專案" + project.getName() + "的職務已被解除", message);
+				delUser.getJoinMemberGroups().remove(member);
+				project.getMemberGroup().remove(member);
+				member.setProject(null);
+				member.setUser(null);
+	
+				replaceIssueRelation(project, delUser);
+	
+				project.setMemberGroup(listP);
+				project = projectRepository.save(project);
+	
+				delUser.setJoinMemberGroups(listU);
+				delUser = userRepository.save(delUser);
+	
+				memberGroupRepository.delete(member);
+				return ErrorCode.Correct;
+			}
 		} else {
 			return ErrorCode.NotProjectManager;
 		}
@@ -251,5 +291,9 @@ public class ProjectMemberService {
 
 	private boolean isNull(Object object) {
 		return object == null;
+	}
+	
+	private boolean isSystemManager(User user) {
+		return user.getRole().equals("SystemManager");
 	}
 }
