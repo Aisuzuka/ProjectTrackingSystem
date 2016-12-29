@@ -197,8 +197,9 @@ public class IssueService {
 					.append("標題：").append(newIssue.getTitle()).enter()
 					.append("描述：").append(newIssue.getDescription()).enter()
 					.append("負責人：").append(user.getName()).enter()
-					.append("指派時間：").append(sdFormat.format(newIssue.getReportTime())).toHtml();
-			System.out.println(message);
+					.append("指派時間：").append(sdFormat.format(newIssue.getReportTime()))
+					.append("請記得登入系統確認並回覆議題").enter()
+					.append("祝你有美好的一天").toHtml();
 			emailService.generateAndSendEmail(personInCharge.getEmailAddress(), project.getName() + "有新的議題被指派", message);
 			response.setState(ErrorCode.Correct);
 			response.setIssueId(newIssue.getId());
@@ -214,6 +215,22 @@ public class IssueService {
 			issue.setTitle(request.getTitle());
 			issue.setPersonInChargeId(projectManager);
 			issue = issueRepository.save(issue);
+			
+			Project project = issue.getIssueGroup().getProject();
+			SimpleDateFormat sdFormat = new SimpleDateFormat("yyyy-MM-dd a hh:mm");
+			String message = new TerminalToHtml()
+					.append(projectManager.getName()).append("你好：").enter()
+					.append("專案").append(project.getName()).setBold(true).setColor(0, 0, 255).append("有一個新的議題被回報").enter()
+					.append("以下為議題內容").enter()
+					.enter()
+					.append("標題：").append(issue.getTitle()).enter()
+					.append("描述：").append(issue.getDescription()).enter()
+					.append("回報人：").append(user.getName()).enter()
+					.append("指派時間：").append(sdFormat.format(issue.getReportTime())).enter()
+					.enter()
+					.append("請記得登入系統完成議題指派").setBold(true)
+					.append("祝你有美好的一天").toHtml();
+			emailService.generateAndSendEmail(projectManager.getEmailAddress(), project.getName() + "有新的議題被回報", message);
 			response.setState(ErrorCode.Correct);
 			response.setIssueId(issue.getId());
 		} else {
