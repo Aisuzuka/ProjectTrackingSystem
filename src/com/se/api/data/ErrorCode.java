@@ -12,4 +12,10 @@ public class ErrorCode {
 	public static int IssueNull = 7;							//Issue isn't exist
 	public static int NotMember = 8;					//User isn't member
 	
+	
+	public static int UserNameRepeat =9 ;
+	public static int EmailFormatNotValid =10;
+	public static int UserNameNotExist =11;
+	public static int PasswordNotVaild =12;
+	public static int NotGeneralUser =13;
 }

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.se.api.data.ErrorCode;
 import com.se.api.data.ProjectData;
 import com.se.api.request.ProjectRequest;
 import com.se.api.response.ProjectItemResponse;
@@ -47,55 +48,64 @@ public class ProjectService {
 	@RequestMapping(value = "/projects/{userId}", method = RequestMethod.POST)
 	public ProjectItemResponse createProject(@PathVariable int userId, @RequestBody ProjectRequest request) {
 
+		//Step1: check user id is valid
 		User user = userRepository.findOne(userId);
-		if (user != null && !user.getRole().equals("SystemManager")) {
-			Project project = new Project();
-			project.setName(request.getProjectName());
-			project.setDescription(request.getDescription());
-			project.setTimeStamp(new Date());
-			project.setManager(user);
-			user.getResponsibleProject().add(project);
-			// userRepository.save(user);
-
-			MemberGroup memberGroup = new MemberGroup();
-
-			memberGroup.setUser(user);
-			memberGroup.setRole("ProjectManager");
-			memberGroup.setProject(project);
-			memberGroup.setJoined(true);
-			project.getMemberGroup().add(memberGroup);
-			user.getJoinMemberGroups().add(memberGroup);
-
-			project = projectRepository.save(project);
-
+		if (user == null){
 			ProjectItemResponse response = new ProjectItemResponse();
-			response.setState(0);
-
-			ProjectData projectData = new ProjectData();
-			projectData.setProjectId(project.getId());
-			projectData.setDescription(project.getDescription());
-			projectData.setProjectName(project.getName());
-			projectData.setManager(user.getName());
-			projectData.setTimeStamp(project.getTimeStamp());
-			response.setProject(projectData);
-			return response;
-		} else {
-
-			ProjectItemResponse response = new ProjectItemResponse();
-			response.setState(-1);
+			response.setState(ErrorCode.UserNull);
 			return response;
 		}
+		
+		//Step2: check user is general user
+		if(user.getRole().equals("SystemManager")){
+			ProjectItemResponse response = new ProjectItemResponse();
+			response.setState(ErrorCode.NotGeneralUser);
+			return response;
+		}
+		
+		//Step3: create project
+		Project project = new Project();//set project
+		project.setName(request.getProjectName());
+		project.setDescription(request.getDescription());
+		project.setTimeStamp(new Date());
+		project.setManager(user);
+		user.getResponsibleProject().add(project);//set user relation
+		MemberGroup memberGroup = new MemberGroup();//set member
+		memberGroup.setUser(user);
+		memberGroup.setRole("ProjectManager");
+		memberGroup.setProject(project);
+		memberGroup.setJoined(true);
+		project.getMemberGroup().add(memberGroup);//set member relation
+		user.getJoinMemberGroups().add(memberGroup);//set member relation
+		project = projectRepository.save(project);
+
+		//Step4: return response
+		ProjectItemResponse response = new ProjectItemResponse();
+		response.setState(0);
+		ProjectData projectData = new ProjectData();
+		projectData.setProjectId(project.getId());
+		projectData.setDescription(project.getDescription());
+		projectData.setProjectName(project.getName());
+		projectData.setManager(user.getName());
+		projectData.setTimeStamp(project.getTimeStamp());
+		response.setProject(projectData);
+		return response;	
+
 
 	}
 
 	@RequestMapping(value = "/projects/{userId}/{projectId}", method = RequestMethod.GET)
 	public ProjectItemResponse getProjectInfo(@PathVariable int userId, @PathVariable int projectId) {
+		
+		//Step1: check project id is valid
 		Project project = projectRepository.findOne(projectId);
 		if (project == null) {
 			ProjectItemResponse response = new ProjectItemResponse();
-			response.setState(-1);
+			response.setState(ErrorCode.ProjectNull);
 			return response;
 		}
+		
+		//Step2: check user is in project
 		Set<MemberGroup> memberGroupSet = project.getMemberGroup();
 		boolean findUser = false;
 		for (MemberGroup memberGroup : memberGroupSet) {
@@ -104,47 +114,54 @@ public class ProjectService {
 				break;
 			}
 		}
-		if (project.getManager().getId() == userId)
-			findUser = true;
+		if (project.getManager().getId() == userId)findUser = true;
 		if (!findUser) {
 			ProjectItemResponse response = new ProjectItemResponse();
-			response.setState(-2);
-			return response;
-		} else {
-			ProjectItemResponse response = new ProjectItemResponse();
-			response.setState(0);
-
-			ProjectData projectData = new ProjectData();
-			projectData.setProjectId(project.getId());
-			projectData.setDescription(project.getDescription());
-			projectData.setProjectName(project.getName());
-			projectData.setManager(project.getManager().getName());
-			projectData.setTimeStamp(project.getTimeStamp());
-			response.setProject(projectData);
-
+			response.setState(ErrorCode.NotMember);
 			return response;
 		}
+		
+		//Step3: return response
+		ProjectItemResponse response = new ProjectItemResponse();
+		response.setState(0);
+		ProjectData projectData = new ProjectData();
+		projectData.setProjectId(project.getId());
+		projectData.setDescription(project.getDescription());
+		projectData.setProjectName(project.getName());
+		projectData.setManager(project.getManager().getName());
+		projectData.setTimeStamp(project.getTimeStamp());
+		response.setProject(projectData);
+		return response;
+			
+		
 
 	}
 
 	@RequestMapping(value = "/projects/list/{userId}", method = RequestMethod.GET)
 	public ProjectListResponse getProjectListByUserId(@PathVariable int userId) {
+		//Step1: check user id is valid
 		User user = userRepository.findOne(userId);
 		if (user == null) {
 			ProjectListResponse response = new ProjectListResponse();
-			response.setState(-1);
-			response.setList(new ArrayList<ProjectData>());
+			response.setState(ErrorCode.UserNull);
 			return response;
 		}
-
+		
+		//Step2: check user is general user
+		if(!user.getRole().equals("GeneralUser")){
+			ProjectListResponse response = new ProjectListResponse();
+			response.setState(ErrorCode.NotGeneralUser);
+			return response;
+		}
+		
+		//Step3: return response
 		Set<MemberGroup> memberGroupSet = user.getJoinMemberGroups();
 		if (memberGroupSet.isEmpty()) {
 			ProjectListResponse response = new ProjectListResponse();
-			response.setState(-2);
+			response.setState(0);
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
-
 		ProjectListResponse response = new ProjectListResponse();
 		response.setState(0);
 		response.setList(new ArrayList<ProjectData>());
@@ -166,14 +183,24 @@ public class ProjectService {
 
 	@RequestMapping(value = "/projects/{userId}", method = RequestMethod.GET)
 	public ProjectListResponse getInvitedProjectListByUserId(@PathVariable int userId) {
+		
+		//Step1: check user id is valid
 		User user = userRepository.findOne(userId);
 		if (user == null) {
 			ProjectListResponse response = new ProjectListResponse();
-			response.setState(-1);
-			response.setList(new ArrayList<ProjectData>());
+			response.setState(ErrorCode.UserNull);
 			return response;
 		}
-
+		
+		//Step2: check user is general user
+		if(!user.getRole().equals("GeneralUser")){
+			ProjectListResponse response = new ProjectListResponse();
+			response.setState(ErrorCode.NotGeneralUser);
+			return response;
+		}
+		
+		
+		//Step3: return response
 		Set<MemberGroup> memberGroupSet = user.getJoinMemberGroups();
 		if (memberGroupSet.isEmpty()) {
 			ProjectListResponse response = new ProjectListResponse();
@@ -181,7 +208,6 @@ public class ProjectService {
 			response.setList(new ArrayList<ProjectData>());
 			return response;
 		}
-
 		ProjectListResponse response = new ProjectListResponse();
 		response.setState(0);
 		response.setList(new ArrayList<ProjectData>());
@@ -202,23 +228,24 @@ public class ProjectService {
 
 	@RequestMapping(value = "/all-projects/{userId}", method = RequestMethod.GET)
 	public ProjectListResponse getAllProjectList(@PathVariable int userId) {
+		
+		//Step1: check user id is valid
 		User user = userRepository.findOne(userId);
 		if (user == null) {
 			ProjectListResponse response = new ProjectListResponse();
-			response.setState(-1);
-			response.setList(new ArrayList<ProjectData>());
+			response.setState(ErrorCode.UserNull);
 			return response;
 		}
 
+		//Step2: check user is system manager
 		if(!user.getRole().equals("SystemManager")){
 			ProjectListResponse response =new ProjectListResponse();
-			response.setState(-2);
-
-			response.setList(new ArrayList<ProjectData>());
+			response.setState(ErrorCode.NotSystemManager);
 			return response;
 		}
+		
+		//Step3: return response
 		List<Project> projectList = IteratorUtils.toList(projectRepository.findAll().iterator());
-
 		ProjectListResponse response = new ProjectListResponse();
 		response.setState(0);
 		response.setList(new ArrayList<ProjectData>());
@@ -237,26 +264,21 @@ public class ProjectService {
 	
 	@RequestMapping(value = "/projects/put/{userId}/{projectId}", method = RequestMethod.POST)
 	public int updateProjectInfo(@PathVariable int userId,@PathVariable int projectId,@RequestBody ProjectRequest request){
-
+		
+		//Step1: check project id is valid
 		Project project = projectRepository.findOne(projectId);
 		if (project == null) {
-			return -1;
+			return ErrorCode.ProjectNull;
 		}
-		Set<MemberGroup> memberGroupSet = project.getMemberGroup();
-		boolean findUser = false;
-		for (MemberGroup memberGroup : memberGroupSet) {
-			if (memberGroup.getUser().getId() == userId) {
-				findUser = true;
-				break;
-			}
-		}
-		if (!findUser) {
-			return -1;
+		
+		//Step2: check user is project manager
+		if(project.getManager().getId()!=userId){
+			return ErrorCode.NotProjectManager;
 		}
 
+		//Step3: save update
 		project.setDescription(request.getDescription());
 		project.setName(request.getProjectName());
-
 		projectRepository.save(project);
 		return 0;
 	}
@@ -266,38 +288,33 @@ public class ProjectService {
 		Project project = projectRepository.findOne(projectId);
 		//Step1:check projectId is valid
 		if(project == null){
-			return -1;
+			return ErrorCode.ProjectNull;
 		}
 		
 		//Step2:check user is projectManager
 		if(project.getManager().getId() != userId){
-			return -2;
+			return ErrorCode.NotProjectManager;
 		}
 		
-		//Step3:delete relation ship
+		//Step3: delete relationship
 		Set<MemberGroup> memberGroupSet= project.getMemberGroup();
 		for(MemberGroup memberGroup:memberGroupSet){
 			memberGroup.getUser().getJoinMemberGroups().remove(memberGroup);
 			memberGroup.setUser(null);
 		}
-		
 		User manager =project.getManager();
 		manager.getResponsibleProject().remove(project);
-
 		project.setManager(null);
-
 		Set<IssueGroup> issueGroupSet = project.getIssueGroup();
 		for (IssueGroup issueGroup : issueGroupSet) {
 			Set<Issue> issueSet = issueGroup.getIssues();
 			for(Issue issue : issueSet){
-
 				issue.getPersonInChargeId().getHandleIssue().remove(issue);
 				issue.setPersonInChargeId(null);
 				issue.getReporterId().getResponsibleIssue().remove(issue);
 				issue.setReporterId(null);
 			}
 		}
-
 		projectRepository.delete(projectId);
 
 		return 0;
