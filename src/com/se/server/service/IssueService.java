@@ -41,6 +41,8 @@ public class IssueService {
 	ProjectRepository projectRepository;
 	@Autowired
 	IssueRepository issueRepository;
+	@Autowired
+	EmailService emailService;
 
 	@RequestMapping(value = "/issues/{userId}/{projectId}", method = RequestMethod.POST)
 	public IssueItemResponse createIssue(@PathVariable int userId, @PathVariable int projectId,
@@ -184,6 +186,15 @@ public class IssueService {
 			issueGroup = addIssue2IssueGroup(newIssue, issueGroup);
 			project = addIssueGroup2Project(issueGroup, project);
 
+			String message = "<html>OOO你好：</br>" + 
+					"專案<b><font color=\"0000ff\">OOO</font></b>有一個新議題被指派給你</br>" +
+					"以下為議題內容</br>" + 
+					"</br>" +
+					"議題標題：" + newIssue.getTitle() + "</br>" + 
+					"議題描述：OOO</br>" + 
+					"議題負責人：OOO</br>" +
+					"議題開始時間：OOO</br></html>";
+			emailService.generateAndSendEmail(personInCharge.getEmailAddress(), "您有新的議題被指派", message);
 			response.setState(ErrorCode.Correct);
 			response.setIssueId(newIssue.getId());
 		} else if (isReporter(user, issue) || isProjectManager(user, issue)) {
