@@ -31,6 +31,7 @@ import com.se.server.repository.MemberGroupRepository;
 import com.se.server.repository.ProjectRepository;
 import com.se.server.repository.UserRepository;
 
+
 @RestController
 @RequestMapping(value = "/api")
 @Transactional("jpaTransactionManager")
@@ -60,6 +61,13 @@ public class UserService {
 
 		user.setName(request.getName());
 		user.setPassword(request.getPassword());
+		String[] spplited = request.getEmailAddress().split("@");
+		if(spplited.length!=3||!spplited[1].equals("@")){
+			UserSessionResponse response = new UserSessionResponse();
+			response.setState(-1);
+			return response;
+		}
+		
 		user.setEmailAddress(request.getEmailAddress());
 		user.setRole("user");
 
@@ -229,5 +237,6 @@ public class UserService {
 		}
 
 	}
+	
 
 }
