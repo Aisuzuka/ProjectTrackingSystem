@@ -1,5 +1,6 @@
 package com.se.server.service;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -14,8 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.se.api.data.ErrorCode;
 import com.se.api.data.IssueData;
 import com.se.api.request.IssueRequest;
+import com.se.api.request.IssueResponse;
 import com.se.api.response.IssueItemResponse;
 import com.se.api.response.IssueListResponse;
 import com.se.server.entity.Issue;
@@ -26,6 +29,7 @@ import com.se.server.repository.IssueGroupRepository;
 import com.se.server.repository.IssueRepository;
 import com.se.server.repository.ProjectRepository;
 import com.se.server.repository.UserRepository;
+import com.se.tool.TerminalToHtml;
 
 @RestController
 @RequestMapping(value = "/api")
@@ -39,6 +43,8 @@ public class IssueService {
 	ProjectRepository projectRepository;
 	@Autowired
 	IssueRepository issueRepository;
+	@Autowired
+	EmailService emailService;
 
 	@RequestMapping(value = "/issues/{userId}/{projectId}", method = RequestMethod.POST)
 	public IssueItemResponse createIssue(@PathVariable int userId, @PathVariable int projectId,
@@ -49,11 +55,9 @@ public class IssueService {
 		// User personInCharge =
 		// userRepository.findOne(request.getPersonInChargeId());
 		if (isNull(user))
-			response.setState(-1);
+			response.setState(ErrorCode.UserNull);
 		else if (isNull(project))
-			response.setState(-1);
-		// else if (isNull(personInCharge))
-		// response.setState(-1);
+			response.setState(ErrorCode.ProjectNull);
 		else {
 			IssueGroup issueGroup = new IssueGroup();
 			issueGroup.setProject(project);
@@ -76,7 +80,7 @@ public class IssueService {
 			project = addIssueGroup2Project(issueGroup, project);
 
 			IssueData model = generateIssueModel(issue);
-			response.setState(0);
+			response.setState(ErrorCode.Correct);
 			response.setIssue(model);
 		}
 		return response;
@@ -89,15 +93,15 @@ public class IssueService {
 		Issue issue = issueRepository.findOne(issueId);
 		User user = userRepository.findOne(userId);
 		if (isNull(user))
-			response.setState(-1);
+			response.setState(ErrorCode.UserNull);
 		else if (isNull(issue))
-			response.setState(-1);
+			response.setState(ErrorCode.IssueNull);
 		else if (user.getId() == issue.getIssueGroup().getProject().getManager().getId()) {
 			IssueData model = generateIssueModel(issue);
 			response.setIssue(model);
-			response.setState(0);
+			response.setState(ErrorCode.Correct);
 		} else {
-			response.setState(-1);
+			response.setState(ErrorCode.NotProjectManager);
 		}
 		return response;
 	}
@@ -107,13 +111,13 @@ public class IssueService {
 		IssueListResponse response = new IssueListResponse();
 		User user = userRepository.findOne(userId);
 		if (isNull(user))
-			response.setState(-1);
+			response.setState(ErrorCode.UserNull);
 		else {
 			Set<Issue> list = user.getResponsibleIssue();
 			list.addAll(user.getHandleIssue());
 			List<IssueData> listModel = generateIssueList(list);
 			response.setList(listModel);
-			response.setState(0);
+			response.setState(ErrorCode.Correct);
 		}
 		return response;
 	}
@@ -124,9 +128,9 @@ public class IssueService {
 		User user = userRepository.findOne(userId);
 		Project project = projectRepository.findOne(projectId);
 		if (isNull(user))
-			response.setState(-1);
+			response.setState(ErrorCode.UserNull);
 		else if (isNull(project))
-			response.setState(-1);
+			response.setState(ErrorCode.ProjectNull);
 		else if (project.getManager().getId() == user.getId()) {
 			Set<IssueGroup> listGroup = project.getIssueGroup();
 			Set<Issue> list = new HashSet<>();
@@ -135,9 +139,9 @@ public class IssueService {
 			}
 			List<IssueData> listModel = generateIssueList(list);
 			response.setList(listModel);
-			response.setState(0);
+			response.setState(ErrorCode.Correct);
 		} else {
-			response.setState(-1);
+			response.setState(ErrorCode.NotProjectManager);
 		}
 		return response;
 	}
@@ -147,31 +151,31 @@ public class IssueService {
 	//
 	// }
 
-	@RequestMapping(value = "/issues/{userId}/{issueId}", method = RequestMethod.PUT)
-	public int updateIssue(@PathVariable int userId, @PathVariable int issueId, @RequestBody IssueRequest request) {
+	@RequestMapping(value = "/issues/put/{userId}/{issueId}", method = RequestMethod.POST)
+	public IssueResponse updateIssue(@PathVariable int userId, @PathVariable int issueId,
+			@RequestBody IssueRequest request) {
 		Issue issue = issueRepository.findOne(issueId);
 		User user = userRepository.findOne(userId);
-		User projectManager = userRepository.findOne(request.getPersonInChargeId());
+		IssueResponse response = new IssueResponse();
 		if (isNull(issue))
-			return -1;
+			response.setState(ErrorCode.IssueNull);
 		else if (isNull(user))
-			return -1;
-		else if (isNull(projectManager))
-			return -1;
+			response.setState(ErrorCode.UserNull);
 		else if (isPersonInCharge(user, issue)) {
-			issue.setFinishTime(new Date());
-			issue = issueRepository.save(issue);
-
 			IssueGroup issueGroup = issueGroupRepository.findOne(issue.getIssueGroup().getId());
 			Project project = projectRepository.findOne(issueGroup.getProject().getId());
 			Issue newIssue = new Issue();
+			User personInCharge = userRepository.findOne(request.getPersonInChargeId());
+			if (isNull(personInCharge)) {
+				response.setState(ErrorCode.PersonInChargeNull);
+			}
+
+			issue.setFinishTime(new Date());
+			issue = issueRepository.save(issue);
+
 			newIssue.setDescription(request.getDescription());
 			newIssue.setFinishTime(null);
 			newIssue.setIssueGroup(issueGroup);
-			User personInCharge = userRepository.findOne(request.getPersonInChargeId());
-			if (isNull(personInCharge)) {
-				return -1;
-			}
 			newIssue.setPersonInChargeId(personInCharge);
 			newIssue.setPriority(request.getPriovify());
 			newIssue.setReporterId(user);
@@ -183,8 +187,32 @@ public class IssueService {
 
 			issueGroup = addIssue2IssueGroup(newIssue, issueGroup);
 			project = addIssueGroup2Project(issueGroup, project);
-			return 0;
+
+			SimpleDateFormat sdFormat = new SimpleDateFormat("yyyy-MM-dd a hh:mm");
+			String message = new TerminalToHtml().append("OOO你好：").enter()
+					.append("專案").append(personInCharge.getName()).setBold(true).setColor(0, 0, 255).append("有一個新議題被指派給你").enter()
+					.append("以下為議題內容").enter()
+					.enter()
+					.append("議題標題：").append(newIssue.getTitle()).enter()
+					.append("議題描述：").append(newIssue.getDescription()).enter()
+					.append("議題負責人：").append(user.getName()).enter()
+					.append("議題開始時間：").append(sdFormat.format(newIssue.getReportTime())).toHtml();
+//					"<html>OOO你好：</br>" + 
+//					"專案<b><font color=\"0000ff\">OOO</font></b>有一個新議題被指派給你</br>" +
+//					"以下為議題內容</br>" + 
+//					"</br>" +
+//					"議題標題：" + newIssue.getTitle() + "</br>" + 
+//					"議題描述：OOO</br>" + 
+//					"議題負責人：OOO</br>" +
+//					"議題開始時間：OOO</br></html>";
+			emailService.generateAndSendEmail(personInCharge.getEmailAddress(), "您有新的議題被指派", message);
+			response.setState(ErrorCode.Correct);
+			response.setIssueId(newIssue.getId());
 		} else if (isReporter(user, issue) || isProjectManager(user, issue)) {
+			User projectManager = userRepository.findOne(request.getPersonInChargeId());
+			if (isNull(projectManager))
+				response.setState(ErrorCode.PersonInChargeNull);
+
 			issue.setDescription(request.getDescription());
 			issue.setPriority(request.getPriovify());
 			issue.setServerity(request.getServerity());
@@ -192,10 +220,13 @@ public class IssueService {
 			issue.setTitle(request.getTitle());
 			issue.setPersonInChargeId(projectManager);
 			issue = issueRepository.save(issue);
-			return 0;
+			response.setState(ErrorCode.Correct);
+			response.setIssueId(issue.getId());
 		} else {
-			return -1;
+			response.setState(ErrorCode.NotMember);
 		}
+
+		return response;
 	}
 
 	private boolean isProjectManager(User user, Issue issue) {
