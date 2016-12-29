@@ -11,5 +11,9 @@ public class ErrorCode {
 	public static int ProjectNull = 6;						//Project isn't exist
 	public static int IssueNull = 7;							//Issue isn't exist
 	public static int NotMember = 8;					//User isn't member
+	public static int UserIsInProject = 9;				//User is invited or joined in project
+	public static int UserIsNotInProject = 10;	//User isn't invited or joined in project
+	public static int PMCantRemove = 11;			//PM can't remove self member relational
+	public static int SMCantInvited = 12;
 	
 }
