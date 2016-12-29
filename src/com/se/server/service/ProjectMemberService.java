@@ -60,6 +60,8 @@ public class ProjectMemberService {
 			response.setState(ErrorCode.UserNull);
 		else if (isNull(project))
 			response.setState(ErrorCode.ProjectNull);
+		else if (isRelationalUser(customer, project))
+				response.setState(ErrorCode.UserIsInProject);
 		else if (isProjectManager(host, project)) {
 			MemberGroup member = new MemberGroup();
 			member.setUser(customer);
@@ -198,6 +200,12 @@ public class ProjectMemberService {
 			for (MemberGroup item : listP) {
 				if (delUser.getId() == item.getUser().getId()) {
 					member = item;
+					String message = new TerminalToHtml()
+							.append(delUser.getName()).append("你好：").enter()
+							.append("專案").append(project.getName()).setBold(true).setColor(0, 0, 255).append("的專案管理員已解除你的職務").enter()
+							.enter()
+							.append("祝你有美好的一天").toHtml();
+					emailService.generateAndSendEmail(delUser.getEmailAddress(), "專案" + project.getName() + "的職務已被解除", message);
 				}
 			}
 			delUser.getJoinMemberGroups().remove(member);
@@ -214,12 +222,6 @@ public class ProjectMemberService {
 			delUser = userRepository.save(delUser);
 
 			memberGroupRepository.delete(member);
-			String message = new TerminalToHtml()
-					.append(delUser.getName()).append("你好：").enter()
-					.append("專案").append(project.getName()).setBold(true).setColor(0, 0, 255).append("的專案管理員已解除你的職務").enter()
-					.enter()
-					.append("祝你有美好的一天").toHtml();
-			emailService.generateAndSendEmail(delUser.getEmailAddress(), "專案" + project.getName() + "的職務已被解除", message);
 			return ErrorCode.Correct;
 		} else {
 			return ErrorCode.NotProjectManager;
