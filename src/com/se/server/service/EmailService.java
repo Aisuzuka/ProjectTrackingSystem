@@ -6,10 +6,14 @@ import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.Transport;
-import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional("jpaTransactionManager")
 public class EmailService {
 	private static Properties mailServerProperties = null;
 
@@ -23,15 +27,15 @@ public class EmailService {
 		}
 		Session getMailSession = Session.getDefaultInstance(mailServerProperties, null);
 		MimeMessage generateMailMessage = new MimeMessage(getMailSession);
-		try {
+		try{
 			Transport transport = getMailSession.getTransport("smtp");
 			generateMailMessage.addRecipient(Message.RecipientType.TO, new InternetAddress(email));
-			generateMailMessage.setSubject("Project Tracking System: " + subject);
+			generateMailMessage.setSubject(subject);
 			generateMailMessage.setContent(html, "text/html; charset=UTF-8");
 			transport.connect("smtp.gmail.com", 587, "taipeitech105se@gmail.com", "ujmujm454");
 			transport.sendMessage(generateMailMessage, generateMailMessage.getAllRecipients());
 			transport.close();
-		} catch (Exception e) {
+		} catch(MessagingException e){
 			e.printStackTrace();
 		}
 	}

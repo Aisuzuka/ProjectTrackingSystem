@@ -189,23 +189,17 @@ public class IssueService {
 			project = addIssueGroup2Project(issueGroup, project);
 
 			SimpleDateFormat sdFormat = new SimpleDateFormat("yyyy-MM-dd a hh:mm");
-			String message = new TerminalToHtml().append("OOO你好：").enter()
-					.append("專案").append(personInCharge.getName()).setBold(true).setColor(0, 0, 255).append("有一個新議題被指派給你").enter()
+			String message = new TerminalToHtml()
+					.append(personInCharge.getName()).append("你好：").enter()
+					.append("專案").append(project.getName()).setBold(true).setColor(0, 0, 255).append("有一個新議題被指派給你").enter()
 					.append("以下為議題內容").enter()
 					.enter()
-					.append("議題標題：").append(newIssue.getTitle()).enter()
-					.append("議題描述：").append(newIssue.getDescription()).enter()
-					.append("議題負責人：").append(user.getName()).enter()
-					.append("議題開始時間：").append(sdFormat.format(newIssue.getReportTime())).toHtml();
-//					"<html>OOO你好：</br>" + 
-//					"專案<b><font color=\"0000ff\">OOO</font></b>有一個新議題被指派給你</br>" +
-//					"以下為議題內容</br>" + 
-//					"</br>" +
-//					"議題標題：" + newIssue.getTitle() + "</br>" + 
-//					"議題描述：OOO</br>" + 
-//					"議題負責人：OOO</br>" +
-//					"議題開始時間：OOO</br></html>";
-			emailService.generateAndSendEmail(personInCharge.getEmailAddress(), "您有新的議題被指派", message);
+					.append("標題：").append(newIssue.getTitle()).enter()
+					.append("描述：").append(newIssue.getDescription()).enter()
+					.append("負責人：").append(user.getName()).enter()
+					.append("指派時間：").append(sdFormat.format(newIssue.getReportTime())).toHtml();
+			System.out.println(message);
+			emailService.generateAndSendEmail(personInCharge.getEmailAddress(), project.getName() + "有新的議題被指派", message);
 			response.setState(ErrorCode.Correct);
 			response.setIssueId(newIssue.getId());
 		} else if (isReporter(user, issue) || isProjectManager(user, issue)) {
