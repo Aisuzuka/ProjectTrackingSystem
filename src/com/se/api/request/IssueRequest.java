@@ -10,6 +10,6 @@ public class IssueRequest {
 	private String description;
 	private String state;
 	private String serverity;
-	private String priovify;
+	private String priority;
 	private int personInChargeId;
 }

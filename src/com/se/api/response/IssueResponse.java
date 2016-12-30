@@ -1,4 +1,4 @@
-package com.se.api.request;
+package com.se.api.response;
 
 import lombok.Getter;
 import lombok.Setter;
