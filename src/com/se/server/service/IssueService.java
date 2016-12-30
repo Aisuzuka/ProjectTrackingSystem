@@ -222,7 +222,7 @@ public class IssueService {
 				String message = new TerminalToHtml().append(personInCharge.getName()).append("你好：").enter()
 						.append("專案").append(project.getName()).setBold(true).setColor(0, 0, 255).append("有一個新議題被指派給你")
 						.enter().append("以下為議題內容").enter().enter().append("標題：").append(newIssue.getTitle()).enter()
-						.append("描述：").append(newIssue.getDescription()).enter().append("負責人：").append(user.getName())
+						.append("描述：").append(newIssue.getDescription()).enter().append("提出者：").append(user.getName())
 						.enter().append("指派時間：").append(sdFormat.format(newIssue.getReportTime())).enter()
 						.append("請記得登入系統確認並回覆議題").enter().append("祝你有美好的一天").toHtml();
 				emailService.generateAndSendEmail(personInCharge.getEmailAddress(), project.getName() + "有新的議題被指派",
