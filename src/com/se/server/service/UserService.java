@@ -34,6 +34,7 @@ import com.se.server.repository.IssueRepository;
 import com.se.server.repository.MemberGroupRepository;
 import com.se.server.repository.ProjectRepository;
 import com.se.server.repository.UserRepository;
+import com.se.tool.TerminalToHtml;
 
 
 @RestController
@@ -50,7 +51,11 @@ public class UserService {
 	IssueRepository issueRepository;
 	@Autowired
 	MemberGroupRepository memberGroupRepository;
-
+	@Autowired
+	EmailService emailService;
+	@Autowired
+	ProjectService projectService;
+	
 	@RequestMapping(value = "/users", method = RequestMethod.POST)
 	public UserSessionResponse createUser(@RequestBody UserCreateRequest request) {
 		
@@ -110,6 +115,29 @@ public class UserService {
 		return response;
 
 	}
+	
+	@RequestMapping(value = "/users/name/{userName}", method = RequestMethod.GET)
+	public UserDetailResponse getUserInfoByName(@PathVariable String userName) {
+		
+		//Step1: check user id is valid
+		User user = userRepository.findByName(userName);
+		if (user == null) {
+			UserDetailResponse response = new UserDetailResponse();
+			response.setState(ErrorCode.UserNameNotExist);//-1
+			return response;
+		}
+		
+		//Step2: return response
+		UserDetailResponse response = new UserDetailResponse();
+		response.setState(0);
+		response.setUserId(user.getId());
+		response.setName(user.getName());
+		response.setEmailAddress(user.getEmailAddress());
+		response.setUserRole(user.getRole());
+		return response;
+
+	}
+
 
 	@RequestMapping(value = "/users/list/{userId}", method = RequestMethod.GET)
 	public UserListResponse getUserList(@PathVariable int userId) {
@@ -187,52 +215,71 @@ public class UserService {
 
 	@RequestMapping(value = "/users/delete/{userId}/{delUserId}", method = RequestMethod.GET)
 	public int deleteUserInfo(@PathVariable int userId, @PathVariable int delUserId) {
+		
+		//Step1: check user id is valid
 		User user = userRepository.findOne(userId);
 		if (user == null) {
-			return -1;
+			return ErrorCode.UserNull;
 		}
 
+		//Step2: check user is system manager
 		if (!user.getRole().equals("SystemManager")) {
-			return -2;
+			return ErrorCode.NotSystemManager;
 		}
 
+		//Step3: check delete user id is valid
 		user = userRepository.findOne(delUserId);
 		if (user == null) {
-			return -3;
+			return ErrorCode.UserNull;
 		}
-
-		Set<Issue> issueList = user.getHandleIssue();
-
-		if (!issueList.isEmpty()) {
-			return -4;
-		}
-
-		issueList = user.getResponsibleIssue();
-
-		if (!issueList.isEmpty()) {
-			return -5;
-		}
-
-		Set<Project> projectList = user.getResponsibleProject();
-
-		if (!projectList.isEmpty()) {
-			return -6;
-		}
-
-		Set<MemberGroup> memberGroupList = user.getJoinMemberGroups();
-
-		for (MemberGroup memberGroup : memberGroupList) {
-			Iterator<MemberGroup> memberGroupIterator = memberGroup.getProject().getMemberGroup().iterator();
-			while (memberGroupIterator.hasNext()) {
-				if (memberGroupIterator.next().getId() == user.getId()) {
-					memberGroupIterator.remove();
+		
+		//Step4: delete project relationship
+				Set<Project> projectSet =user.getResponsibleProject();
+				for(Project project:projectSet){
+					projectService.deleteProject(user.getId(), project.getId());
 				}
-				memberGroup.setProject(null);
-			}
+
+		//Step5: delete handle issue relationship 
+		Set<Issue> issueList = user.getHandleIssue();
+		for(Issue issue :issueList){
+			Project project= issue.getIssueGroup().getProject();
+			User manager = project.getManager();
+			issue.setPersonInChargeId(manager);
+			manager.getHandleIssue().add(issue);
+			userRepository.save(manager);
+			String message = new TerminalToHtml().append("專案經理").append(manager.getName()).setColor(0, 0, 255).append("您好").enter().enter()
+					.append("由於議題負責人").append(user.getName()).setColor(0, 0, 255).append("被系統管理員刪除").enter()
+					.append("專案").append(project.getName()).setColor(0, 0, 255).append("中的").append(issue.getTitle()).setColor(0, 0, 255).append("議題將交給您處理").toHtml();
+			emailService.generateAndSendEmail(manager.getEmailAddress(),"議題"+issue.getTitle()+"轉交給您處理",message);
+		}
+		user.setHandleIssue(null);
+		
+		//Step6: delete responsible issue relationship 
+		issueList = user.getResponsibleIssue();
+		for(Issue issue :issueList){
+			Project project= issue.getIssueGroup().getProject();
+			User manager = project.getManager();
+			issue.setReporterId(manager);
+			manager.getResponsibleIssue().add(issue);
+			userRepository.save(manager);
+			String message = new TerminalToHtml().append("專案經理").append(manager.getName()).setColor(0, 0, 255).append("您好").enter().enter()
+					.append("由於議題提出人").append(user.getName()).setColor(0, 0, 255).append("被系統管理員刪除").enter()
+					.append("專案").append(project.getName()).setColor(0, 0, 255).append("中的").append(issue.getTitle()).setColor(0, 0, 255).append("議題將由您負責").toHtml();
+			emailService.generateAndSendEmail(manager.getEmailAddress(),"議題"+issue.getTitle()+"轉交給您負責",message);
+		}
+		user.setResponsibleIssue(null);
+		
+		
+		
+		//Step7: delete member relationship
+		Set<MemberGroup> memberGroupSet =user.getJoinMemberGroups();
+		for(MemberGroup memberGroup :memberGroupSet){
+			memberGroup.getProject().getMemberGroup().remove(memberGroup);
+			memberGroup.setProject(null);
 		}
 
+		//Step8: delete user
 		userRepository.delete(user.getId());
-
 		return 0;
 
 	}
