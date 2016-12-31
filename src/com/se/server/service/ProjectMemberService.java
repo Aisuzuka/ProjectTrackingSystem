@@ -148,7 +148,7 @@ public class ProjectMemberService {
 		else if (isRelationalUser(user, project)) {
 			Set<MemberGroup> list = project.getMemberGroup();
 			for (MemberGroup member : list) {
-				if (user.getId() == member.getUser().getId()) {
+				if (request.getMember().getUserId() == member.getUser().getId()) {
 					if (isParty(user, member)) {
 						User projectManager = project.getManager();
 						String message = new TerminalToHtml()
