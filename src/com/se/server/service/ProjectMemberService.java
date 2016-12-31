@@ -20,6 +20,7 @@ import com.se.api.request.MemberDetailRequest;
 import com.se.api.response.MemberItemResponse;
 import com.se.api.response.MemberListResponse;
 import com.se.server.entity.Issue;
+import com.se.server.entity.IssueGroup;
 import com.se.server.entity.MemberGroup;
 import com.se.server.entity.Project;
 import com.se.server.entity.User;
@@ -60,10 +61,12 @@ public class ProjectMemberService {
 			response.setState(ErrorCode.UserNull);
 		else if (isNull(project))
 			response.setState(ErrorCode.ProjectNull);
+		else if (isSystemManager(customer))
+			response.setState(ErrorCode.SMCantInvited);
+		else if (isIllegalRole(request.getRole()))
+			response.setState(ErrorCode.CantSetIllegalRole);
 		else if (isRelationalUser(customer, project))
 				response.setState(ErrorCode.UserIsInProject);
-		else if (isSystemManager(customer))
-				response.setState(ErrorCode.SMCantInvited);
 		else if (isProjectManager(host, project)) {
 			MemberGroup member = new MemberGroup();
 			member.setUser(customer);
@@ -139,27 +142,39 @@ public class ProjectMemberService {
 	@RequestMapping(value = "/members/put/{userId}/{projectId}", method = RequestMethod.POST)
 	public int updateInfo(@PathVariable int userId, @PathVariable int projectId,
 			@RequestBody MemberDetailRequest request) {
-		User user = userRepository.findOne(userId);
+		User host = userRepository.findOne(userId);
+		User customer = userRepository.findOne(request.getMember().getUserId());
 		Project project = projectRepository.findOne(projectId);
-		if (isNull(user))
+		if (isNull(host))
 			return ErrorCode.UserNull;
+		else if (isNull(customer))
+			return ErrorCode.CustomerNull;
 		else if (isNull(project))
 			return ErrorCode.ProjectNull;
-		else if (isRelationalUser(user, project)) {
+		else if (isSystemManager(customer))
+			return ErrorCode.NotSystemManager;
+		else if (isProjectManager(customer, project))
+			return ErrorCode.CantChangeProjectManager;
+		else if (isIllegalRole(request.getMember().getRole()))
+			return ErrorCode.CantSetIllegalRole;
+		else if (isRelationalUser(host, project)) {
 			Set<MemberGroup> list = project.getMemberGroup();
 			for (MemberGroup member : list) {
-				if (request.getMember().getUserId() == member.getUser().getId()) {
-					if (isParty(user, member)) {
+				if (customer.getId() == member.getUser().getId()) {
+					if (isParty(host, member)) {
+						if (isReplaied(member))
+							return ErrorCode.AlreadyReplaied;
 						User projectManager = project.getManager();
 						String message = new TerminalToHtml()
 								.append(projectManager.getName()).append("你好：").enter()
-								.append("你邀請的成員").append(user.getName()).setBold(true).setColor(0, 0, 255).append((isAgree(request)? "同意": "拒絕") + "加入專案").append(project.getName()).setBold(true).setColor(0, 0, 255).enter()
+								.append("你邀請的成員").append(host.getName()).setBold(true).setColor(0, 0, 255).append((isAgree(request)? "同意": "拒絕") + "加入專案").append(project.getName()).setBold(true).setColor(0, 0, 255).enter()
 								.enter()
 								.append("祝你有美好的一天").toHtml();
-						emailService.generateAndSendEmail(projectManager.getEmailAddress(), user.getName() + "已回覆你的專案邀請" + project.getName(), message);
+						emailService.generateAndSendEmail(projectManager.getEmailAddress(), host.getName() + "已回覆你的專案邀請" + project.getName(), message);
 						if (isAgree(request)) {
 							member.setJoined(true);
 							member = memberGroupRepository.save(member);
+							return ErrorCode.Correct;
 						} else {
 							return deleteMember(userId, projectId, userId);
 						}
@@ -170,7 +185,7 @@ public class ProjectMemberService {
 					}
 				}
 			}
-			return ErrorCode.Correct;
+			return ErrorCode.NotMember;
 		} else {
 			return ErrorCode.NotMember;
 		}
@@ -197,6 +212,8 @@ public class ProjectMemberService {
 			return ErrorCode.CustomerNull;
 		else if (isProjectManager(delUser, project))
 			return ErrorCode.PMCantRemove;
+		else if (!isRelationalUser(delUser, project))
+			return ErrorCode.NotMember;
 		else if (isProjectManager(user, project)) {
 			Set<MemberGroup> listP = project.getMemberGroup();
 			Set<MemberGroup> listU = delUser.getJoinMemberGroups();
@@ -244,6 +261,10 @@ public class ProjectMemberService {
 	//
 	// }
 
+	private boolean isReplaied(MemberGroup member) {
+		return member.isJoined();
+	}
+
 	private boolean isParty(User user, MemberGroup member) {
 		return user.getId() == member.getUser().getId();
 	}
@@ -252,17 +273,29 @@ public class ProjectMemberService {
 		return request.getMember().getIsJoined().equals("1");
 	}
 	
-	private  void replaceIssueRelation(Project project, User user) {
+	private void replaceIssueRelation(Project project, User delUser) {
 		// Issue's user relation will be replaced to project manager.
-		Set<Issue> list = user.getResponsibleIssue();
-		for (Issue item : list) {
-			if (item.getReporterId().getId() == user.getId()) {
-				item.setReporterId(project.getManager());
+		User manager = userRepository.findOne(project.getManager().getId());
+		IssueGroup[] groupList = project.getIssueGroup().toArray(new IssueGroup[project.getIssueGroup().size()]);
+		Set<Issue> projectIssue = manager.getResponsibleIssue();
+		for(int i = 0; i < groupList.length; i++){
+			IssueGroup groupItem = groupList[i];
+			Issue[] list = groupItem.getIssues().toArray(new Issue[groupItem.getIssues().size()]);
+			for (int j = 0; j < list.length; j++) {
+				Issue item = list[j];
+				if (item.getReporterId().getId() == delUser.getId()) {
+					item.setReporterId(project.getManager());
+//					projectIssue.add(item);
+//					manager = userRepository.save(manager);
+					item = issueRepository.save(item);
+				}
+				if (item.getPersonInChargeId().getId() == delUser.getId()) {
+					item.setPersonInChargeId(project.getManager());
+//					projectIssue.add(item);
+//					manager = userRepository.save(manager);
+					item = issueRepository.save(item);
+				}
 			}
-			if (item.getPersonInChargeId().getId() == user.getId()) {
-				item.setPersonInChargeId(project.getManager());
-			}
-			item = issueRepository.save(item);
 		}
 	}
 
@@ -292,8 +325,12 @@ public class ProjectMemberService {
 	private boolean isNull(Object object) {
 		return object == null;
 	}
-	
+
 	private boolean isSystemManager(User user) {
 		return user.getRole().equals("SystemManager");
+	}
+
+	private boolean isIllegalRole(String role) {
+		return role.equals("ProjectManager");
 	}
 }
