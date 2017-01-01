@@ -144,7 +144,7 @@ public class IssueService {
 			response.setState(ErrorCode.UserNull);
 		else if (isNull(project))
 			response.setState(ErrorCode.ProjectNull);
-		else if (project.getManager().getId() == user.getId()) {
+		else if (isRelationalUser(user, project)) {
 			Set<IssueGroup> listGroup = project.getIssueGroup();
 			Set<Issue> list = new HashSet<>();
 			for (IssueGroup group : listGroup) {
@@ -154,7 +154,7 @@ public class IssueService {
 			response.setList(listModel);
 			response.setState(ErrorCode.Correct);
 		} else {
-			response.setState(ErrorCode.NotProjectManager);
+			response.setState(ErrorCode.NotMember);
 		}
 		return response;
 	}
