@@ -20,4 +20,5 @@ public class ErrorCode {
 	public static int UserNameNotExist = 15;
 	public static int PasswordNotVaild = 16;
 	public static int NotGeneralUser = 17;
+	public static int UserHaveProjectOrInvite=22;
 }

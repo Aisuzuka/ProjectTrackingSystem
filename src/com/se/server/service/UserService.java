@@ -202,7 +202,12 @@ public class UserService {
 			return ErrorCode.EmailFormatNotValid;
 		}
 		
-		//Step4: save user
+		//Step4: check user not in member
+		if(request.getUserRole().equals("SystemManager") && user.getJoinMemberGroups()!=null && !user.getJoinMemberGroups().isEmpty()){
+			return ErrorCode.UserHaveProjectOrInvite;
+		}
+		
+		//Step5: save user
 		if(request.getPassword()!= null && !request.getPassword().equals(""))
 		user.setPassword(request.getPassword());
 		if(request.getUserRole() != null && !request.getUserRole().equals(""))
