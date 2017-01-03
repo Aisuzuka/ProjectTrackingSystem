@@ -18,11 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.se.api.data.ErrorCode;
 import com.se.api.data.IssueData;
 import com.se.api.request.IssueRequest;
-import com.se.api.request.IssueResponse;
 import com.se.api.response.IssueItemResponse;
 import com.se.api.response.IssueListResponse;
+import com.se.api.response.IssueResponse;
 import com.se.server.entity.Issue;
 import com.se.server.entity.IssueGroup;
+import com.se.server.entity.MemberGroup;
 import com.se.server.entity.Project;
 import com.se.server.entity.User;
 import com.se.server.repository.IssueGroupRepository;
@@ -58,6 +59,8 @@ public class IssueService {
 			response.setState(ErrorCode.UserNull);
 		else if (isNull(project))
 			response.setState(ErrorCode.ProjectNull);
+		else if (!isRelationalUser(user, project))
+			response.setState(ErrorCode.UserIsNotInProject);
 		else {
 			IssueGroup issueGroup = new IssueGroup();
 			issueGroup.setProject(project);
@@ -68,7 +71,7 @@ public class IssueService {
 			issue.setFinishTime(null);
 			issue.setIssueGroup(issueGroup);
 			issue.setPersonInChargeId(project.getManager());
-			issue.setPriority(request.getPriovify());
+			issue.setPriority(request.getPriority());
 			issue.setReporterId(user);
 			issue.setReportTime(new Date());
 			issue.setServerity(request.getServerity());
@@ -80,6 +83,16 @@ public class IssueService {
 			project = addIssueGroup2Project(issueGroup, project);
 
 			IssueData model = generateIssueModel(issue);
+			User projectManager = project.getManager();
+			SimpleDateFormat sdFormat = new SimpleDateFormat("yyyy-MM-dd a hh:mm");
+			String message = new TerminalToHtml().append(projectManager.getName()).append("你好：").enter().append("專案")
+					.append(project.getName()).setBold(true).setColor(0, 0, 255).append("有一個新的議題被回報").enter()
+					.append("以下為議題內容").enter().enter().append("標題：").append(issue.getTitle()).enter().append("描述：")
+					.append(issue.getDescription()).enter().append("回報人：").append(user.getName()).enter()
+					.append("指派時間：").append(sdFormat.format(issue.getReportTime())).enter().enter()
+					.append("請記得登入系統完成議題指派").setBold(true).enter().append("祝你有美好的一天").toHtml();
+			emailService.generateAndSendEmail(projectManager.getEmailAddress(), project.getName() + "有新的議題被回報",
+					message);
 			response.setState(ErrorCode.Correct);
 			response.setIssue(model);
 		}
@@ -131,7 +144,7 @@ public class IssueService {
 			response.setState(ErrorCode.UserNull);
 		else if (isNull(project))
 			response.setState(ErrorCode.ProjectNull);
-		else if (project.getManager().getId() == user.getId()) {
+		else if (isRelationalUser(user, project)) {
 			Set<IssueGroup> listGroup = project.getIssueGroup();
 			Set<Issue> list = new HashSet<>();
 			for (IssueGroup group : listGroup) {
@@ -141,29 +154,29 @@ public class IssueService {
 			response.setList(listModel);
 			response.setState(ErrorCode.Correct);
 		} else {
-			response.setState(ErrorCode.NotProjectManager);
+			response.setState(ErrorCode.NotMember);
 		}
 		return response;
 	}
 
-	 @RequestMapping(value = "/issues/{userId}", method = RequestMethod.GET)
-	 public IssueListResponse getAllIssueList(@PathVariable int userId) {
-			IssueListResponse response = new IssueListResponse();
-			User user = userRepository.findOne(userId);
-			if(!isSystemManager(user))
-				response.setState(ErrorCode.NotSystemManager);
-			else {
-				Iterable<Issue> listGroup = issueRepository.findAll();
-				Set<Issue> list = new HashSet<>();
-				for (Issue item : listGroup) {
-					list.add(item);
-				}
-				List<IssueData> listModel = generateIssueList(list);
-				response.setList(listModel);
-				response.setState(ErrorCode.Correct);
+	@RequestMapping(value = "/issues/{userId}", method = RequestMethod.GET)
+	public IssueListResponse getAllIssueList(@PathVariable int userId) {
+		IssueListResponse response = new IssueListResponse();
+		User user = userRepository.findOne(userId);
+		if (!isSystemManager(user))
+			response.setState(ErrorCode.NotSystemManager);
+		else {
+			Iterable<Issue> listGroup = issueRepository.findAll();
+			Set<Issue> list = new HashSet<>();
+			for (Issue item : listGroup) {
+				list.add(item);
 			}
-			return response;
-	 }
+			List<IssueData> listModel = generateIssueList(list);
+			response.setList(listModel);
+			response.setState(ErrorCode.Correct);
+		}
+		return response;
+	}
 
 	@RequestMapping(value = "/issues/put/{userId}/{issueId}", method = RequestMethod.POST)
 	public IssueResponse updateIssue(@PathVariable int userId, @PathVariable int issueId,
@@ -180,71 +193,70 @@ public class IssueService {
 			Project project = projectRepository.findOne(issueGroup.getProject().getId());
 			Issue newIssue = new Issue();
 			User personInCharge = userRepository.findOne(request.getPersonInChargeId());
-			if (isNull(personInCharge)) {
+			if (isNull(personInCharge))
 				response.setState(ErrorCode.PersonInChargeNull);
+			else if (!isLastIssue(issue, issueGroup))
+				response.setState(ErrorCode.IssueHasFinished);
+			else if (!isRelationalUser(personInCharge, project))
+				response.setState(ErrorCode.UserIsNotInProject);
+			else {
+				issue.setFinishTime(new Date());
+				issue = issueRepository.save(issue);
+
+				newIssue.setDescription(request.getDescription());
+				newIssue.setFinishTime(null);
+				newIssue.setIssueGroup(issueGroup);
+				newIssue.setPersonInChargeId(personInCharge);
+				newIssue.setPriority(request.getPriority());
+				newIssue.setReporterId(user);
+				newIssue.setReportTime(new Date());
+				newIssue.setServerity(request.getServerity());
+				newIssue.setState(request.getState());
+				newIssue.setTitle(request.getTitle());
+				newIssue = issueRepository.save(newIssue);
+
+				issueGroup = addIssue2IssueGroup(newIssue, issueGroup);
+				project = addIssueGroup2Project(issueGroup, project);
+
+				SimpleDateFormat sdFormat = new SimpleDateFormat("yyyy-MM-dd a hh:mm");
+				String message = new TerminalToHtml().append(personInCharge.getName()).append("你好：").enter()
+						.append("專案").append(project.getName()).setBold(true).setColor(0, 0, 255).append("有一個新議題被指派給你")
+						.enter().append("以下為議題內容").enter().enter().append("標題：").append(newIssue.getTitle()).enter()
+						.append("描述：").append(newIssue.getDescription()).enter().append("提出者：").append(user.getName())
+						.enter().append("指派時間：").append(sdFormat.format(newIssue.getReportTime())).enter()
+						.append("請記得登入系統確認並回覆議題").enter().append("祝你有美好的一天").toHtml();
+				emailService.generateAndSendEmail(personInCharge.getEmailAddress(), project.getName() + "有新的議題被指派",
+						message);
+				response.setState(ErrorCode.Correct);
+				response.setIssueId(newIssue.getId());
 			}
-
-			issue.setFinishTime(new Date());
-			issue = issueRepository.save(issue);
-
-			newIssue.setDescription(request.getDescription());
-			newIssue.setFinishTime(null);
-			newIssue.setIssueGroup(issueGroup);
-			newIssue.setPersonInChargeId(personInCharge);
-			newIssue.setPriority(request.getPriovify());
-			newIssue.setReporterId(user);
-			newIssue.setReportTime(new Date());
-			newIssue.setServerity(request.getServerity());
-			newIssue.setState(request.getState());
-			newIssue.setTitle(request.getTitle());
-			newIssue = issueRepository.save(newIssue);
-
-			issueGroup = addIssue2IssueGroup(newIssue, issueGroup);
-			project = addIssueGroup2Project(issueGroup, project);
-
-			SimpleDateFormat sdFormat = new SimpleDateFormat("yyyy-MM-dd a hh:mm");
-			String message = new TerminalToHtml()
-					.append(personInCharge.getName()).append("你好：").enter()
-					.append("專案").append(project.getName()).setBold(true).setColor(0, 0, 255).append("有一個新議題被指派給你").enter()
-					.append("以下為議題內容").enter()
-					.enter()
-					.append("標題：").append(newIssue.getTitle()).enter()
-					.append("描述：").append(newIssue.getDescription()).enter()
-					.append("負責人：").append(user.getName()).enter()
-					.append("指派時間：").append(sdFormat.format(newIssue.getReportTime()))
-					.append("請記得登入系統確認並回覆議題").enter()
-					.append("祝你有美好的一天").toHtml();
-			emailService.generateAndSendEmail(personInCharge.getEmailAddress(), project.getName() + "有新的議題被指派", message);
-			response.setState(ErrorCode.Correct);
-			response.setIssueId(newIssue.getId());
 		} else if (isReporter(user, issue) || isProjectManager(user, issue)) {
 			User projectManager = userRepository.findOne(request.getPersonInChargeId());
 			if (isNull(projectManager))
 				response.setState(ErrorCode.PersonInChargeNull);
 
 			issue.setDescription(request.getDescription());
-			issue.setPriority(request.getPriovify());
+			issue.setPriority(request.getPriority());
 			issue.setServerity(request.getServerity());
 			issue.setState(request.getState());
 			issue.setTitle(request.getTitle());
 			issue.setPersonInChargeId(projectManager);
 			issue = issueRepository.save(issue);
-			
-			Project project = issue.getIssueGroup().getProject();
-			SimpleDateFormat sdFormat = new SimpleDateFormat("yyyy-MM-dd a hh:mm");
-			String message = new TerminalToHtml()
-					.append(projectManager.getName()).append("你好：").enter()
-					.append("專案").append(project.getName()).setBold(true).setColor(0, 0, 255).append("有一個新的議題被回報").enter()
-					.append("以下為議題內容").enter()
-					.enter()
-					.append("標題：").append(issue.getTitle()).enter()
-					.append("描述：").append(issue.getDescription()).enter()
-					.append("回報人：").append(user.getName()).enter()
-					.append("指派時間：").append(sdFormat.format(issue.getReportTime())).enter()
-					.enter()
-					.append("請記得登入系統完成議題指派").setBold(true)
-					.append("祝你有美好的一天").toHtml();
-			emailService.generateAndSendEmail(projectManager.getEmailAddress(), project.getName() + "有新的議題被回報", message);
+
+			// Project project = issue.getIssueGroup().getProject();
+			// SimpleDateFormat sdFormat = new SimpleDateFormat("yyyy-MM-dd a
+			// hh:mm");
+			// String message = new
+			// TerminalToHtml().append(projectManager.getName()).append("你好：").enter().append("專案")
+			// .append(project.getName()).setBold(true).setColor(0, 0,
+			// 255).append("有一個新的議題被回報").enter()
+			// .append("以下為議題內容").enter().enter().append("標題：").append(issue.getTitle()).enter().append("描述：")
+			// .append(issue.getDescription()).enter().append("回報人：").append(user.getName()).enter()
+			// .append("指派時間：").append(sdFormat.format(issue.getReportTime())).enter().enter()
+			// .append("請記得登入系統完成議題指派").setBold(true).enter().append("祝你有美好的一天").toHtml();
+			// emailService.generateAndSendEmail(projectManager.getEmailAddress(),
+			// project.getName() + "有新的議題被回報",
+			// message);
 			response.setState(ErrorCode.Correct);
 			response.setIssueId(issue.getId());
 		} else {
@@ -252,6 +264,10 @@ public class IssueService {
 		}
 
 		return response;
+	}
+
+	private boolean isLastIssue(Issue issue, IssueGroup issueGroup) {
+		return issueGroup.getLastIssueId() == issue.getId();
 	}
 
 	private boolean isProjectManager(User user, Issue issue) {
@@ -310,8 +326,18 @@ public class IssueService {
 	private boolean isNull(Object object) {
 		return object == null;
 	}
-	
+
 	private boolean isSystemManager(User user) {
 		return user.getRole().equals("SystemManager");
+	}
+
+	private boolean isRelationalUser(User user, Project project) {
+		Set<MemberGroup> list = project.getMemberGroup();
+		for (MemberGroup member : list) {
+			if (user.getId() == member.getUser().getId()) {
+				return true;
+			}
+		}
+		return false;
 	}
 }
