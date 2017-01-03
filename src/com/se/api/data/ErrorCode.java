@@ -24,4 +24,5 @@ public class ErrorCode {
 	public static int CantChangeProjectManager = 19;
 	public static int CantSetIllegalRole = 20;
 	public static int AlreadyReplaied = 21;
+	public static int UserHaveProjectOrInvite=22;
 }
