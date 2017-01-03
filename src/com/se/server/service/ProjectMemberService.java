@@ -66,7 +66,7 @@ public class ProjectMemberService {
 		else if (isIllegalRole(request.getRole()))
 			response.setState(ErrorCode.CantSetIllegalRole);
 		else if (isRelationalUser(customer, project))
-				response.setState(ErrorCode.UserIsInProject);
+			response.setState(ErrorCode.UserIsInProject);
 		else if (isProjectManager(host, project)) {
 			MemberGroup member = new MemberGroup();
 			member.setUser(customer);
@@ -91,19 +91,15 @@ public class ProjectMemberService {
 			model.setUserId(member.getUser().getId());
 
 			SimpleDateFormat sdFormat = new SimpleDateFormat("yyyy-MM-dd a hh:mm");
-			String message = new TerminalToHtml()
-					.append(customer.getName()).append("你好：").enter()
-					.append("專案管理員").append(host.getName()).setBold(true).setColor(0, 0, 255).append("邀請你加入專案").append(project.getName()).setBold(true).setColor(0, 0, 255).enter()
-					.append("以下為專案內容").enter()
-					.enter()
-					.append("標題：").append(project.getName()).enter()
-					.append("描述：").append(project.getDescription()).enter()
-					.append("管理員：").append(host.getName()).enter()
-					.append("創立時間：").append(sdFormat.format(project.getTimeStamp())).enter()
-					.enter()
-					.append("請記得登入系統回覆邀請").setBold(true).enter()
-					.append("祝你有美好的一天").toHtml();
-			emailService.generateAndSendEmail(customer.getEmailAddress(), host.getName() + "邀請你加入專案" + project.getName(), message);
+			String message = new TerminalToHtml().append(customer.getName()).append("你好：").enter().append("專案管理員")
+					.append(host.getName()).setBold(true).setColor(0, 0, 255).append("邀請你加入專案")
+					.append(project.getName()).setBold(true).setColor(0, 0, 255).enter().append("以下為專案內容").enter()
+					.enter().append("標題：").append(project.getName()).enter().append("描述：")
+					.append(project.getDescription()).enter().append("管理員：").append(host.getName()).enter()
+					.append("創立時間：").append(sdFormat.format(project.getTimeStamp())).enter().enter()
+					.append("請記得登入系統回覆邀請").setBold(true).enter().append("祝你有美好的一天").toHtml();
+			emailService.generateAndSendEmail(customer.getEmailAddress(),
+					host.getName() + "邀請你加入專案" + project.getName(), message);
 			response.setMember(model);
 			response.setState(ErrorCode.Correct);
 		} else {
@@ -165,18 +161,20 @@ public class ProjectMemberService {
 						if (isReplaied(member))
 							return ErrorCode.AlreadyReplaied;
 						User projectManager = project.getManager();
-						String message = new TerminalToHtml()
-								.append(projectManager.getName()).append("你好：").enter()
-								.append("你邀請的成員").append(host.getName()).setBold(true).setColor(0, 0, 255).append((isAgree(request)? "同意": "拒絕") + "加入專案").append(project.getName()).setBold(true).setColor(0, 0, 255).enter()
-								.enter()
-								.append("祝你有美好的一天").toHtml();
-						emailService.generateAndSendEmail(projectManager.getEmailAddress(), host.getName() + "已回覆你的專案邀請" + project.getName(), message);
+						String message = new TerminalToHtml().append(projectManager.getName()).append("你好：").enter()
+								.append("你邀請的成員").append(host.getName()).setBold(true).setColor(0, 0, 255)
+								.append((isAgree(request) ? "同意" : "拒絕") + "加入專案").append(project.getName())
+								.setBold(true).setColor(0, 0, 255).enter().enter().append("祝你有美好的一天").toHtml();
+						emailService.generateAndSendEmail(projectManager.getEmailAddress(),
+								host.getName() + "已回覆你的專案邀請" + project.getName(), message);
 						if (isAgree(request)) {
 							member.setJoined(true);
 							member = memberGroupRepository.save(member);
 							return ErrorCode.Correct;
 						} else {
-							return deleteMember(userId, projectId, userId);
+							// return deleteMember(project.getManager().getId(),
+							// projectId, userId);
+							return rejectInvite(customer, project);
 						}
 					} else {
 						member.setRole(request.getMember().getRole());
@@ -198,7 +196,7 @@ public class ProjectMemberService {
 	// @PathVariable int memberId, @RequestBody String member) {
 	//
 	// }
-
+	
 	@RequestMapping(value = "/members/delete/{userId}/{projectId}/{delUserId}", method = RequestMethod.POST)
 	public int deleteMember(@PathVariable int userId, @PathVariable int projectId, @PathVariable int delUserId) {
 		User user = userRepository.findOne(userId);
@@ -223,28 +221,27 @@ public class ProjectMemberService {
 					member = item;
 				}
 			}
-			if(isNull(member))
+			if (isNull(member))
 				return ErrorCode.UserIsNotInProject;
-			else{
-				String message = new TerminalToHtml()
-						.append(delUser.getName()).append("你好：").enter()
-						.append("專案").append(project.getName()).setBold(true).setColor(0, 0, 255).append("的專案管理員已解除你的職務").enter()
-						.enter()
-						.append("祝你有美好的一天").toHtml();
-				emailService.generateAndSendEmail(delUser.getEmailAddress(), "專案" + project.getName() + "的職務已被解除", message);
+			else {
+				String message = new TerminalToHtml().append(delUser.getName()).append("你好：").enter().append("專案")
+						.append(project.getName()).setBold(true).setColor(0, 0, 255).append("的專案管理員已解除你的職務").enter()
+						.enter().append("祝你有美好的一天").toHtml();
+				emailService.generateAndSendEmail(delUser.getEmailAddress(), "專案" + project.getName() + "的職務已被解除",
+						message);
 				delUser.getJoinMemberGroups().remove(member);
 				project.getMemberGroup().remove(member);
 				member.setProject(null);
 				member.setUser(null);
-	
+
 				replaceIssueRelation(project, delUser);
-	
+
 				project.setMemberGroup(listP);
 				project = projectRepository.save(project);
-	
+
 				delUser.setJoinMemberGroups(listU);
 				delUser = userRepository.save(delUser);
-	
+
 				memberGroupRepository.delete(member);
 				return ErrorCode.Correct;
 			}
@@ -272,27 +269,27 @@ public class ProjectMemberService {
 	private boolean isAgree(MemberDetailRequest request) {
 		return request.getMember().getIsJoined().equals("1");
 	}
-	
+
 	private void replaceIssueRelation(Project project, User delUser) {
 		// Issue's user relation will be replaced to project manager.
 		User manager = userRepository.findOne(project.getManager().getId());
 		IssueGroup[] groupList = project.getIssueGroup().toArray(new IssueGroup[project.getIssueGroup().size()]);
 		Set<Issue> projectIssue = manager.getResponsibleIssue();
-		for(int i = 0; i < groupList.length; i++){
+		for (int i = 0; i < groupList.length; i++) {
 			IssueGroup groupItem = groupList[i];
 			Issue[] list = groupItem.getIssues().toArray(new Issue[groupItem.getIssues().size()]);
 			for (int j = 0; j < list.length; j++) {
 				Issue item = list[j];
 				if (item.getReporterId().getId() == delUser.getId()) {
 					item.setReporterId(project.getManager());
-//					projectIssue.add(item);
-//					manager = userRepository.save(manager);
+					// projectIssue.add(item);
+					// manager = userRepository.save(manager);
 					item = issueRepository.save(item);
 				}
 				if (item.getPersonInChargeId().getId() == delUser.getId()) {
 					item.setPersonInChargeId(project.getManager());
-//					projectIssue.add(item);
-//					manager = userRepository.save(manager);
+					// projectIssue.add(item);
+					// manager = userRepository.save(manager);
 					item = issueRepository.save(item);
 				}
 			}
@@ -333,4 +330,31 @@ public class ProjectMemberService {
 	private boolean isIllegalRole(String role) {
 		return role.equals("ProjectManager");
 	}
+	
+	private int rejectInvite(User customer, Project project) {
+		Set<MemberGroup> listP = project.getMemberGroup();
+		Set<MemberGroup> listU = customer.getJoinMemberGroups();
+		MemberGroup member = null;
+		for (MemberGroup item : listP) {
+			if (customer.getId() == item.getUser().getId()) {
+				member = item;
+			}
+		}
+		customer.getJoinMemberGroups().remove(member);
+		project.getMemberGroup().remove(member);
+		member.setProject(null);
+		member.setUser(null);
+
+		replaceIssueRelation(project, customer);
+
+		project.setMemberGroup(listP);
+		project = projectRepository.save(project);
+
+		customer.setJoinMemberGroups(listU);
+		customer = userRepository.save(customer);
+
+		memberGroupRepository.delete(member);
+		return ErrorCode.Correct;
+	}
+
 }
