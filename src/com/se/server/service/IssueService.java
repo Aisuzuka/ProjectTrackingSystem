@@ -109,12 +109,12 @@ public class IssueService {
 			response.setState(ErrorCode.UserNull);
 		else if (isNull(issue))
 			response.setState(ErrorCode.IssueNull);
-		else if (user.getId() == issue.getIssueGroup().getProject().getManager().getId()) {
+		else if (isRelationalUser(user, issue.getIssueGroup().getProject())) {
 			IssueData model = generateIssueModel(issue);
 			response.setIssue(model);
 			response.setState(ErrorCode.Correct);
 		} else {
-			response.setState(ErrorCode.NotProjectManager);
+			response.setState(ErrorCode.NotMember);
 		}
 		return response;
 	}

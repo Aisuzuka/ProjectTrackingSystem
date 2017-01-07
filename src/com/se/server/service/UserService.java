@@ -1,7 +1,6 @@
 package com.se.server.service;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -239,11 +238,15 @@ public class UserService {
 		}
 		
 		//Step4: delete project relationship
-				Set<Project> projectSet =user.getResponsibleProject();
-				for(Project project:projectSet){
-					projectService.deleteProject(user.getId(), project.getId());
-				}
-
+		Set<Project> projectSet = user.getResponsibleProject();
+		List<Integer> projectList = new ArrayList<Integer>();
+		for(Project project: projectSet){
+			projectList.add(project.getId());
+		}
+		for(int projectId: projectList){
+			projectService.deleteProject(user.getId(), projectId);
+		}
+		
 		//Step5: delete handle issue relationship 
 		Set<Issue> issueList = user.getHandleIssue();
 		for(Issue issue :issueList){
